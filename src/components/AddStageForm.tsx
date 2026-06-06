@@ -55,7 +55,7 @@ export default function AddStageForm({ projectId, teams, nextOrder, onAdded }: P
           <div>
             <label className="text-xs text-gray-500 block mb-1">ステージ名 *</label>
             <input
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-400"
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
               placeholder="例: デザインレビュー"
@@ -66,7 +66,7 @@ export default function AddStageForm({ projectId, teams, nextOrder, onAdded }: P
             <label className="text-xs text-gray-500 block mb-1">順番</label>
             <input
               type="number"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-400"
               value={form.order}
               onChange={(e) => setForm({ ...form, order: Number(e.target.value) })}
               min={1}
@@ -76,7 +76,7 @@ export default function AddStageForm({ projectId, teams, nextOrder, onAdded }: P
         <div>
           <label className="text-xs text-gray-500 block mb-1">説明</label>
           <input
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-400"
             value={form.description}
             onChange={(e) => setForm({ ...form, description: e.target.value })}
             placeholder="任意"
@@ -86,7 +86,7 @@ export default function AddStageForm({ projectId, teams, nextOrder, onAdded }: P
           <div>
             <label className="text-xs text-gray-500 block mb-1">担当チーム *</label>
             <select
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
               value={form.teamId}
               onChange={(e) => setForm({ ...form, teamId: e.target.value })}
               required
@@ -101,7 +101,7 @@ export default function AddStageForm({ projectId, teams, nextOrder, onAdded }: P
             <label className="text-xs text-gray-500 block mb-1">締め切り *</label>
             <input
               type="datetime-local"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-400"
               value={form.deadline}
               onChange={(e) => setForm({ ...form, deadline: e.target.value })}
               required

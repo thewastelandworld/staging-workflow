@@ -103,7 +103,7 @@ export default function TeamsPage() {
               <div className="flex-1 min-w-[180px]">
                 <label className="text-xs text-gray-500 block mb-1">チーム名 *</label>
                 <input
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-400"
                   value={teamName}
                   onChange={(e) => setTeamName(e.target.value)}
                   placeholder="例: デザインチーム"
@@ -204,7 +204,7 @@ export default function TeamsPage() {
                         <h3 className="text-sm font-medium text-gray-700 mb-2">メンバーを追加</h3>
                         <div className="flex flex-wrap gap-2">
                           <input
-                            className="flex-1 min-w-[120px] px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                            className="flex-1 min-w-[120px] px-3 py-1.5 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-400"
                             placeholder="名前 *"
                             value={mf.name}
                             onChange={(e) => setMemberForms((prev) => ({
@@ -212,7 +212,7 @@ export default function TeamsPage() {
                             }))}
                           />
                           <input
-                            className="flex-1 min-w-[160px] px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                            className="flex-1 min-w-[160px] px-3 py-1.5 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-400"
                             placeholder="メールアドレス *"
                             type="email"
                             value={mf.email}
@@ -221,7 +221,7 @@ export default function TeamsPage() {
                             }))}
                           />
                           <input
-                            className="w-24 px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                            className="w-24 px-3 py-1.5 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-400"
                             placeholder="役割"
                             value={mf.role}
                             onChange={(e) => setMemberForms((prev) => ({

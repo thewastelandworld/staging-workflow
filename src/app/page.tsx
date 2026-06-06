@@ -127,14 +127,14 @@ export default function DashboardPage() {
           <form onSubmit={createProject} className="mb-6 p-4 bg-white border border-blue-200 rounded-xl shadow-sm">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <input
-                className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-400"
                 placeholder="プロジェクト名 *"
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 required
               />
               <input
-                className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-400"
                 placeholder="説明（任意）"
                 value={newDesc}
                 onChange={(e) => setNewDesc(e.target.value)}
