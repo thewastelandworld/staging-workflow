@@ -20,18 +20,25 @@ export async function PATCH(req: Request, { params }: Params) {
   const prevStatus = stage.status
   const newStatus: StageStatus = body.status ?? stage.status
 
-  // Update stage
-  project.stages[stageIdx] = {
+  // Update stage — when restarting, clear completedAt and emailSent
+  const isRestart = prevStatus === 'completed' && newStatus === 'in_progress'
+  const updated = {
     ...stage,
     ...body,
     status: newStatus,
     startedAt: newStatus === 'in_progress' && !stage.startedAt
       ? new Date().toISOString()
       : stage.startedAt,
-    completedAt: newStatus === 'completed' && !stage.completedAt
-      ? new Date().toISOString()
-      : stage.completedAt,
+    completedAt: isRestart
+      ? undefined
+      : newStatus === 'completed' && !stage.completedAt
+        ? new Date().toISOString()
+        : stage.completedAt,
+    emailSent: isRestart ? false : (body.emailSent ?? stage.emailSent),
   }
+  // Remove undefined keys so they don't persist in JSON
+  Object.keys(updated).forEach((k) => (updated as Record<string, unknown>)[k] === undefined && delete (updated as Record<string, unknown>)[k])
+  project.stages[stageIdx] = updated as typeof stage
 
   writeDB(db)
 

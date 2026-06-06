@@ -108,6 +108,17 @@ export default function StageTimeline({ project, teams, onStageUpdate, onStageDe
     setLoadingId(null)
   }
 
+  async function handleRestart(stage: Stage) {
+    if (!confirm(`「${stage.name}」を再開しますか？\n完了状態がリセットされ、進行中に戻ります。`)) return
+    setLoadingId(stage.id)
+    await onStageUpdate(stage.id, {
+      status: 'in_progress',
+      completedAt: undefined,
+      emailSent: false,
+    })
+    setLoadingId(null)
+  }
+
   const inputCls = 'w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white'
 
   return (
@@ -270,22 +281,26 @@ export default function StageTimeline({ project, teams, onStageUpdate, onStageDe
                         </div>
                       )}
 
-                      {status !== 'completed' && (
-                        <div className="mt-3 flex gap-2">
-                          {status === 'pending' && (
-                            <button onClick={() => handleStart(stage)} disabled={isActive}
-                              className="text-sm px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors">
-                              {isActive ? '...' : '▶ 開始'}
-                            </button>
-                          )}
-                          {(status === 'in_progress' || status === 'overdue') && (
-                            <button onClick={() => handleComplete(stage)} disabled={isActive}
-                              className="text-sm px-3 py-1 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors">
-                              {isActive ? '送信中...' : '✓ 完了にする'}
-                            </button>
-                          )}
-                        </div>
-                      )}
+                      <div className="mt-3 flex gap-2 flex-wrap">
+                        {status === 'pending' && (
+                          <button onClick={() => handleStart(stage)} disabled={isActive}
+                            className="text-sm px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors">
+                            {isActive ? '...' : '▶ 開始'}
+                          </button>
+                        )}
+                        {(status === 'in_progress' || status === 'overdue') && (
+                          <button onClick={() => handleComplete(stage)} disabled={isActive}
+                            className="text-sm px-3 py-1 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors">
+                            {isActive ? '送信中...' : '✓ 完了にする'}
+                          </button>
+                        )}
+                        {status === 'completed' && (
+                          <button onClick={() => handleRestart(stage)} disabled={isActive}
+                            className="text-sm px-3 py-1 bg-orange-500 text-white rounded-lg hover:bg-orange-600 disabled:opacity-50 transition-colors">
+                            {isActive ? '...' : '🔄 やり直す'}
+                          </button>
+                        )}
+                      </div>
 
                       {status === 'overdue' && (
                         <div className="mt-2 text-xs text-red-600 font-medium flex items-center gap-1">
