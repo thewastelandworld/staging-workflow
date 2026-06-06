@@ -151,6 +151,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
                 projectId={project.id}
                 teams={teams}
                 nextOrder={nextOrder}
+                existingStages={project.stages}
                 onAdded={load}
               />
             </>
