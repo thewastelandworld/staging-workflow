@@ -24,3 +24,14 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Dark Mode */
+html.dark-mode body {
+  filter: invert(1) hue-rotate(180deg);
+}
+
+/* 絵文字・画像は二重 invert で元の色に戻す */
+html.dark-mode img,
+html.dark-mode .no-invert {
+  filter: invert(1) hue-rotate(180deg);
+}

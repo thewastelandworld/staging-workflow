@@ -15,6 +15,14 @@ export interface Team {
   createdAt: string
 }
 
+export interface StageReviewer {
+  teamId: string
+  order: number
+  checkContent?: string  // 確認すべき内容（ステージ作成時に設定）
+  checkedAt?: string
+  note?: string          // 確認者が入力したコメント
+}
+
 export interface Stage {
   id: string
   projectId: string
@@ -27,7 +35,9 @@ export interface Stage {
   completedAt?: string
   status: StageStatus
   notes?: string
+  problem?: string
   emailSent?: boolean
+  reviewers?: StageReviewer[]
 }
 
 export interface Project {

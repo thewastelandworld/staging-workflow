@@ -1,0 +1,237 @@
+{
+  "projects": [
+    {
+      "id": "8056424f-1e96-4f8f-a620-59c9fd1cdc04",
+      "name": "ECサイトリニューアル v2.0",
+      "description": "トップページから商品ページのリデザイン＆実装",
+      "createdAt": "2026-06-06T11:51:03.881Z",
+      "stages": [
+        {
+          "id": "7262cb22-db4d-46d5-a181-a3dd0f9b8058",
+          "projectId": "8056424f-1e96-4f8f-a620-59c9fd1cdc04",
+          "order": 1,
+          "name": "UIデザイン",
+          "description": "ワイヤーフレーム作成＆デザインカンプ",
+          "teamId": "0908aa55-6b5e-4cfc-8fcf-fffc13a7909f",
+          "deadline": "2026-06-05T09:00:00.000Z",
+          "status": "completed",
+          "emailSent": false,
+          "startedAt": "2026-06-06T11:51:05.536Z",
+          "completedAt": "2026-06-06T11:57:24.842Z"
+        },
+        {
+          "id": "0bffd81c-8e61-42ac-bb1f-08903d942783",
+          "projectId": "8056424f-1e96-4f8f-a620-59c9fd1cdc04",
+          "order": 2,
+          "name": "フロントエンド実装",
+          "description": "Next.js コンポーネント実装",
+          "teamId": "6ef687aa-3ef7-48b5-aa9d-067f4d1fcca7",
+          "deadline": "2026-06-08T09:00:00.000Z",
+          "status": "in_progress",
+          "emailSent": false,
+          "startedAt": "2026-06-06T11:57:24.843Z"
+        },
+        {
+          "id": "b990bc9c-999a-4802-805c-fe75c8c42867",
+          "projectId": "8056424f-1e96-4f8f-a620-59c9fd1cdc04",
+          "order": 3,
+          "name": "QAテスト",
+          "description": "動作確認・バグ修正",
+          "teamId": "3c27cd08-1be6-40cd-8464-6ce091f9374b",
+          "deadline": "2026-06-12T09:00:00.000Z",
+          "status": "completed",
+          "emailSent": true,
+          "startedAt": "2026-06-06T12:05:48.334Z",
+          "completedAt": "2026-06-06T12:11:32.508Z"
+        },
+        {
+          "id": "483775ff-83b5-407d-bbbc-3f3e1fe35ed3",
+          "projectId": "8056424f-1e96-4f8f-a620-59c9fd1cdc04",
+          "order": 4,
+          "name": "test",
+          "description": "test memo",
+          "teamId": "0908aa55-6b5e-4cfc-8fcf-fffc13a7909f",
+          "deadline": "2026-06-19T21:06",
+          "status": "in_progress",
+          "emailSent": true,
+          "startedAt": "2026-06-06T12:11:32.509Z"
+        },
+        {
+          "id": "ec44deaf-6b83-48e5-90b5-754440988211",
+          "projectId": "8056424f-1e96-4f8f-a620-59c9fd1cdc04",
+          "order": 5,
+          "name": "フロントエンド実装 (コピー)",
+          "description": "Next.js コンポーネント実装",
+          "teamId": "6ef687aa-3ef7-48b5-aa9d-067f4d1fcca7",
+          "deadline": "2026-06-20T21:18",
+          "status": "pending",
+          "emailSent": false
+        },
+        {
+          "id": "2e2e0385-65e7-473e-ab9b-98f66a0f0fd8",
+          "projectId": "8056424f-1e96-4f8f-a620-59c9fd1cdc04",
+          "order": 6,
+          "name": "test (コピー)",
+          "description": "test memo",
+          "teamId": "0908aa55-6b5e-4cfc-8fcf-fffc13a7909f",
+          "deadline": "2026-06-18T21:18",
+          "status": "pending",
+          "emailSent": false
+        }
+      ]
+    },
+    {
+      "id": "588580af-7fac-4d8d-bccd-ac505a837388",
+      "name": "test2",
+      "description": "test the pj",
+      "createdAt": "2026-06-06T12:08:04.030Z",
+      "stages": [
+        {
+          "id": "99925590-f491-40f9-8f9c-9a21c975f110",
+          "projectId": "588580af-7fac-4d8d-bccd-ac505a837388",
+          "order": 1,
+          "name": "step1",
+          "description": "test 1",
+          "teamId": "0908aa55-6b5e-4cfc-8fcf-fffc13a7909f",
+          "deadline": "2026-06-08T21:08",
+          "status": "in_progress",
+          "emailSent": false,
+          "startedAt": "2026-06-06T12:08:39.684Z"
+        }
+      ]
+    },
+    {
+      "id": "24473ed2-fbd5-4553-9222-1ff97b094894",
+      "name": "test 3",
+      "description": "test 3",
+      "createdAt": "2026-06-06T12:15:22.672Z",
+      "stages": [
+        {
+          "id": "c9ed7ff9-eb60-4689-b612-6a628cd18770",
+          "projectId": "24473ed2-fbd5-4553-9222-1ff97b094894",
+          "order": 1,
+          "name": "テスト１",
+          "description": "手間が",
+          "teamId": "0908aa55-6b5e-4cfc-8fcf-fffc13a7909f",
+          "deadline": "2026-06-09T10:46:00.000Z",
+          "status": "completed",
+          "emailSent": false,
+          "reviewers": [
+            {
+              "teamId": "0908aa55-6b5e-4cfc-8fcf-fffc13a7909f",
+              "order": 1,
+              "checkContent": "デザイナーのOK",
+              "checkedAt": "2026-06-07T11:00:43.393Z",
+              "note": ""
+            },
+            {
+              "teamId": "3c27cd08-1be6-40cd-8464-6ce091f9374b",
+              "order": 2,
+              "checkContent": "QA１の確認\nQA１０の確認\nQA１００の確認",
+              "checkedAt": "2026-06-07T11:02:38.641Z",
+              "note": ""
+            },
+            {
+              "teamId": "6ef687aa-3ef7-48b5-aa9d-067f4d1fcca7",
+              "order": 3,
+              "checkContent": "書いたら",
+              "checkedAt": "2026-06-07T11:05:05.779Z",
+              "note": ""
+            }
+          ],
+          "startedAt": "2026-06-07T10:52:07.954Z",
+          "completedAt": "2026-06-07T11:05:05.779Z"
+        },
+        {
+          "id": "f2f60287-8efd-4f87-a576-98b9b8b794c0",
+          "projectId": "24473ed2-fbd5-4553-9222-1ff97b094894",
+          "order": 2,
+          "name": "テスト１ (コピー)",
+          "description": "手間が",
+          "teamId": "0908aa55-6b5e-4cfc-8fcf-fffc13a7909f",
+          "deadline": "2026-06-11T19:56",
+          "status": "in_progress",
+          "emailSent": false,
+          "reviewers": [
+            {
+              "teamId": "0908aa55-6b5e-4cfc-8fcf-fffc13a7909f",
+              "order": 1,
+              "checkContent": "デザイナーのOK",
+              "checkedAt": "2026-06-08T23:24:31.165Z",
+              "note": "おk"
+            },
+            {
+              "teamId": "3c27cd08-1be6-40cd-8464-6ce091f9374b",
+              "order": 2,
+              "checkContent": "QAの確認"
+            },
+            {
+              "teamId": "6ef687aa-3ef7-48b5-aa9d-067f4d1fcca7",
+              "order": 3,
+              "checkContent": "書いたら"
+            }
+          ],
+          "startedAt": "2026-06-07T10:59:17.225Z",
+          "problem": "ある"
+        }
+      ]
+    },
+    {
+      "id": "f855b52e-16f6-4959-9b0e-1f7d9cb70c9f",
+      "name": "テスト４",
+      "description": "正常試験",
+      "createdAt": "2026-06-08T23:31:58.968Z",
+      "stages": []
+    }
+  ],
+  "teams": [
+    {
+      "id": "0908aa55-6b5e-4cfc-8fcf-fffc13a7909f",
+      "name": "デザインチーム",
+      "color": "#8b5cf6",
+      "members": [
+        {
+          "id": "2d391483-82ec-4d01-9cd0-a92fff2c8b69",
+          "name": "田中 花子",
+          "email": "tanaka@example.com",
+          "role": "デザイナー"
+        },
+        {
+          "id": "4a60b515-c1a1-40fc-b4fd-d15691639fc4",
+          "name": "詩織",
+          "email": "a@a.com",
+          "role": "テスト"
+        }
+      ],
+      "createdAt": "2026-06-06T11:51:03.183Z"
+    },
+    {
+      "id": "6ef687aa-3ef7-48b5-aa9d-067f4d1fcca7",
+      "name": "開発チーム",
+      "color": "#3b82f6",
+      "members": [
+        {
+          "id": "6be63736-143f-4840-a76a-62ae51efe044",
+          "name": "山田 太郎",
+          "email": "yamada@example.com",
+          "role": "エンジニア"
+        }
+      ],
+      "createdAt": "2026-06-06T11:51:03.223Z"
+    },
+    {
+      "id": "3c27cd08-1be6-40cd-8464-6ce091f9374b",
+      "name": "QAチーム",
+      "color": "#10b981",
+      "members": [
+        {
+          "id": "d037f35b-5244-4778-a01d-26eeaf6dc851",
+          "name": "佐藤 次郎",
+          "email": "sato@example.com",
+          "role": "QAエンジニア"
+        }
+      ],
+      "createdAt": "2026-06-06T11:51:03.243Z"
+    }
+  ]
+}

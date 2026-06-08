@@ -5,20 +5,25 @@ import Link from 'next/link'
 import type { Project, Team, Stage } from '@/lib/types'
 import StageTimeline from '@/components/StageTimeline'
 import AddStageForm from '@/components/AddStageForm'
+import { useDarkMode } from '@/components/DarkModeProvider'
+import { useLanguage } from '@/components/LanguageProvider'
+import { LOCALES, type Locale } from '@/lib/i18n'
 
 export default function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
+  const { isDark, toggle: toggleDark } = useDarkMode()
+  const { t, locale, setLocale } = useLanguage()
   const [project, setProject] = useState<Project | null>(null)
   const [teams, setTeams] = useState<Team[]>([])
   const [loading, setLoading] = useState(true)
 
   async function load() {
-    const [p, t] = await Promise.all([
+    const [p, tm] = await Promise.all([
       fetch(`/api/projects/${id}`).then((r) => r.json()),
       fetch('/api/teams').then((r) => r.json()),
     ])
     setProject(p)
-    setTeams(t)
+    setTeams(tm)
     setLoading(false)
   }
 
@@ -34,20 +39,20 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
   }
 
   async function handleStageDelete(stageId: string) {
-    if (!confirm('このステージを削除しますか？')) return
+    if (!confirm(t.deleteStageConfirm)) return
     await fetch(`/api/projects/${id}/stages/${stageId}`, { method: 'DELETE' })
     load()
   }
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center">
-      <div className="text-gray-400 animate-pulse">読み込み中...</div>
+      <div className="text-gray-400 animate-pulse">{t.loading}</div>
     </div>
   )
 
   if (!project || 'error' in project) return (
     <div className="min-h-screen flex items-center justify-center text-gray-400">
-      プロジェクトが見つかりません
+      {t.caseNotFound}
     </div>
   )
 
@@ -61,6 +66,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
   const nextOrder = project.stages.length > 0
     ? Math.max(...project.stages.map((s) => s.order)) + 1
     : 1
+  const dateLocale = locale === 'zh' ? 'zh-CN' : locale === 'en' ? 'en-US' : 'ja-JP'
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -68,12 +74,28 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
       <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Link href="/" className="text-gray-400 hover:text-gray-600 text-sm">← 戻る</Link>
+            <Link href="/" className="text-gray-400 hover:text-gray-600 text-sm">{t.back}</Link>
             <span className="text-gray-300">|</span>
             <span className="text-2xl">🚦</span>
             <h1 className="text-lg font-bold text-gray-900 truncate">{project.name}</h1>
           </div>
-          <Link href="/teams" className="text-sm text-gray-500 hover:text-gray-900">チーム管理</Link>
+          <div className="flex items-center gap-3">
+            <Link href="/teams" className="text-sm text-gray-500 hover:text-gray-900">{t.teamManagement}</Link>
+            <div className="flex items-center gap-1 text-xs">
+              {LOCALES.map((l) => (
+                <button key={l.value} onClick={() => setLocale(l.value as Locale)}
+                  className={`px-2 py-0.5 rounded transition-colors ${locale === l.value ? 'bg-blue-100 text-blue-700 font-medium' : 'text-gray-400 hover:text-gray-700'}`}>
+                  {l.label}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={toggleDark}
+              className="no-invert text-lg leading-none opacity-60 hover:opacity-100 transition-opacity"
+            >
+              {isDark ? '☀️' : '🌙'}
+            </button>
+          </div>
         </div>
       </header>
 
@@ -102,13 +124,13 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
 
           {/* Stats */}
           <div className="flex flex-wrap gap-4 text-sm">
-            <span className="text-gray-500">{totalStages}ステージ</span>
-            <span className="text-green-600 font-medium">✓ 完了: {completedCount}</span>
+            <span className="text-gray-500">{t.stagesLabel(totalStages)}</span>
+            <span className="text-green-600 font-medium">{t.completedLabel(completedCount)}</span>
             {overdueCount > 0 && (
-              <span className="text-red-600 font-semibold">🔴 期限超過: {overdueCount}件</span>
+              <span className="text-red-600 font-semibold">{t.overdueLabel(overdueCount)}</span>
             )}
             <span className="text-gray-400">
-              作成: {new Date(project.createdAt).toLocaleDateString('ja-JP')}
+              {t.createdLabel} {new Date(project.createdAt).toLocaleDateString(dateLocale)}
             </span>
           </div>
         </div>
@@ -117,7 +139,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
         {project.stages.length > 0 && (
           <div className="mb-6 flex flex-wrap gap-2">
             {Array.from(new Set(project.stages.map((s) => s.teamId))).map((teamId) => {
-              const team = teams.find((t) => t.id === teamId)
+              const team = teams.find((tm) => tm.id === teamId)
               if (!team) return null
               return (
                 <span key={teamId} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm bg-white border border-gray-200 text-gray-700">
@@ -131,12 +153,12 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
 
         {/* Timeline */}
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-          <h2 className="font-semibold text-gray-900 mb-6">ステージタイムライン</h2>
+          <h2 className="font-semibold text-gray-900 mb-6">{t.stageTimeline}</h2>
           {teams.length === 0 ? (
             <div className="text-center py-10 text-gray-400">
-              <p>チームが登録されていません。</p>
+              <p>{t.noTeamsMessage}</p>
               <Link href="/teams" className="text-blue-600 text-sm hover:underline mt-1 inline-block">
-                チーム管理でチームを追加 →
+                {t.addTeamLink}
               </Link>
             </div>
           ) : (

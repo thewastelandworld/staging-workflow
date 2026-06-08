@@ -19,6 +19,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     deadline: body.deadline,
     status: 'pending' as const,
     emailSent: false,
+    reviewers: (body.reviewers ?? []) as { teamId: string; order: number; checkedAt?: string }[],
   }
 
   project.stages.push(stage)
