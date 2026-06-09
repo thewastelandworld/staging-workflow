@@ -118,7 +118,7 @@ export default function AddStageForm({ projectId, teams, nextOrder, existingStag
       )}
 
       <div className="space-y-3">
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label className="text-xs text-gray-500 block mb-1">{t.stageName}</label>
             <input className={inputCls} value={form.name}
@@ -136,7 +136,7 @@ export default function AddStageForm({ projectId, teams, nextOrder, existingStag
           <input className={inputCls} value={form.description}
             onChange={(e) => setForm({ ...form, description: e.target.value })} />
         </div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label className="text-xs text-gray-500 block mb-1">{t.teamManagement.replace('管理', '')} *</label>
             <select className={inputCls + ' bg-white'} value={form.teamId}

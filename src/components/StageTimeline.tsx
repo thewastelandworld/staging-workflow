@@ -197,7 +197,7 @@ export default function StageTimeline({ project, teams, onStageUpdate, onStageDe
       )}
 
       <div className="relative">
-        <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-gray-200" />
+        <div className="absolute left-4 sm:left-6 top-0 bottom-0 w-0.5 bg-gray-200" />
 
         <div className="space-y-4">
           {sorted.map((stage, index) => {
@@ -226,9 +226,9 @@ export default function StageTimeline({ project, teams, onStageUpdate, onStageDe
               'bg-gray-300 ring-gray-100'
 
             return (
-              <div key={stage.id} className="relative pl-14">
+              <div key={stage.id} className="relative pl-10 sm:pl-14">
                 {/* Step dot */}
-                <div className={`absolute left-3 top-4 w-6 h-6 rounded-full border-2 border-white ring-4 flex items-center justify-center text-white text-xs font-bold shadow ${dotColor}`}>
+                <div className={`absolute left-1.5 sm:left-3 top-4 w-5 h-5 sm:w-6 sm:h-6 rounded-full border-2 border-white ring-4 flex items-center justify-center text-white text-xs font-bold shadow ${dotColor}`}>
                   {status === 'completed' ? '✓' : index + 1}
                 </div>
 
@@ -239,7 +239,7 @@ export default function StageTimeline({ project, teams, onStageUpdate, onStageDe
                       <div className="flex items-center gap-2 mb-1">
                         <span className="text-xs font-semibold text-yellow-700 bg-yellow-100 px-2 py-0.5 rounded">{t.editingBadge}</span>
                       </div>
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
                           <label className="text-xs text-gray-500 block mb-1">{t.stageName}</label>
                           <input className={inputCls} value={editForm.name}
@@ -256,7 +256,7 @@ export default function StageTimeline({ project, teams, onStageUpdate, onStageDe
                         <input className={inputCls} value={editForm.description}
                           onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} />
                       </div>
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
                           <label className="text-xs text-gray-500 block mb-1">{t.teams} *</label>
                           <select className={inputCls} value={editForm.teamId}

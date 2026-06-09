@@ -87,18 +87,18 @@ export default function TeamsPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link href="/" className="text-gray-400 hover:text-gray-600 text-sm">{t.back}</Link>
-            <span className="text-gray-300">|</span>
-            <span className="text-2xl">👥</span>
-            <h1 className="text-lg font-bold text-gray-900">{t.teamManagement}</h1>
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <Link href="/" className="text-gray-400 hover:text-gray-600 text-sm flex-shrink-0">{t.back}</Link>
+            <span className="text-gray-300 flex-shrink-0">|</span>
+            <span className="text-xl sm:text-2xl flex-shrink-0">👥</span>
+            <h1 className="text-base sm:text-lg font-bold text-gray-900 truncate">{t.teamManagement}</h1>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1 text-xs">
+          <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+            <div className="flex items-center gap-0.5 sm:gap-1 text-xs">
               {LOCALES.map((l) => (
                 <button key={l.value} onClick={() => setLocale(l.value as Locale)}
-                  className={`px-2 py-0.5 rounded transition-colors ${locale === l.value ? 'bg-blue-100 text-blue-700 font-medium' : 'text-gray-400 hover:text-gray-700'}`}>
+                  className={`px-1.5 sm:px-2 py-0.5 rounded transition-colors ${locale === l.value ? 'bg-blue-100 text-blue-700 font-medium' : 'text-gray-400 hover:text-gray-700'}`}>
                   {l.label}
                 </button>
               ))}
@@ -113,7 +113,7 @@ export default function TeamsPage() {
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-6 py-8">
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         {/* Add team form */}
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 mb-6">
           <h2 className="font-semibold text-gray-900 mb-4">{t.addNewTeam}</h2>
