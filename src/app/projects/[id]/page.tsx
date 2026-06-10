@@ -16,6 +16,11 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
   const [project, setProject] = useState<Project | null>(null)
   const [teams, setTeams] = useState<Team[]>([])
   const [loading, setLoading] = useState(true)
+  const [editingName, setEditingName] = useState(false)
+  const [editName, setEditName] = useState('')
+  const [editingDesc, setEditingDesc] = useState(false)
+  const [editDesc, setEditDesc] = useState('')
+  const [savingMeta, setSavingMeta] = useState(false)
 
   async function load() {
     const [p, tm] = await Promise.all([
@@ -28,6 +33,20 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
   }
 
   useEffect(() => { load() }, [id])
+
+  async function saveMeta(name: string, description: string) {
+    setSavingMeta(true)
+    const res = await fetch(`/api/projects/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, description }),
+    })
+    if (res.ok) {
+      const updated = await res.json()
+      setProject(updated)
+    }
+    setSavingMeta(false)
+  }
 
   async function handleStageUpdate(stageId: string, data: Partial<Stage>) {
     await fetch(`/api/projects/${id}/stages/${stageId}`, {
@@ -77,7 +96,33 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
             <Link href="/" className="text-gray-400 hover:text-gray-600 text-sm flex-shrink-0">{t.back}</Link>
             <span className="text-gray-300 flex-shrink-0">|</span>
             <span className="text-xl sm:text-2xl flex-shrink-0">🚦</span>
-            <h1 className="text-sm sm:text-lg font-bold text-gray-900 truncate">{project.name}</h1>
+            {editingName ? (
+              <input
+                autoFocus
+                className="text-sm sm:text-lg font-bold text-gray-900 border-b border-blue-400 bg-transparent outline-none truncate w-40 sm:w-64"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                onBlur={() => {
+                  setEditingName(false)
+                  if (editName.trim() && editName !== project.name) {
+                    saveMeta(editName.trim(), project.description ?? '')
+                  }
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+                  if (e.key === 'Escape') { setEditName(project.name); setEditingName(false) }
+                }}
+                disabled={savingMeta}
+              />
+            ) : (
+              <h1
+                className="text-sm sm:text-lg font-bold text-gray-900 truncate cursor-pointer hover:text-blue-600 transition-colors"
+                onClick={() => { setEditName(project.name); setEditingName(true) }}
+                title={t.edit}
+              >
+                {project.name}
+              </h1>
+            )}
           </div>
           <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
             <Link href="/teams" className="hidden sm:block text-sm text-gray-500 hover:text-gray-900">{t.teamManagement}</Link>
@@ -102,8 +147,32 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
       <main className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         {/* Project summary */}
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 sm:p-6 mb-4 sm:mb-6">
-          {project.description && (
-            <p className="text-gray-500 text-sm mb-4">{project.description}</p>
+          {editingDesc ? (
+            <textarea
+              autoFocus
+              rows={2}
+              className="w-full text-sm text-gray-700 border border-blue-300 rounded-lg px-3 py-2 mb-4 outline-none resize-none focus:ring-2 focus:ring-blue-300"
+              value={editDesc}
+              onChange={(e) => setEditDesc(e.target.value)}
+              onBlur={() => {
+                setEditingDesc(false)
+                if (editDesc !== project.description) {
+                  saveMeta(project.name, editDesc)
+                }
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') { setEditDesc(project.description ?? ''); setEditingDesc(false) }
+              }}
+              disabled={savingMeta}
+            />
+          ) : (
+            <p
+              className="text-gray-500 text-sm mb-4 cursor-pointer hover:text-gray-700 transition-colors min-h-[1.25rem]"
+              onClick={() => { setEditDesc(project.description ?? ''); setEditingDesc(true) }}
+              title={t.edit}
+            >
+              {project.description || <span className="text-gray-300 italic">{t.descriptionPlaceholder}</span>}
+            </p>
           )}
 
           {/* Progress */}
