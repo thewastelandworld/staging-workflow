@@ -1,17 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getSupabase } from '@/lib/supabase'
 import { v4 as uuid } from 'uuid'
-import type { Project } from '@/lib/types'
-
-function toProject(row: Record<string, unknown>): Project {
-  return {
-    id: row.id as string,
-    name: row.name as string,
-    description: (row.description as string) ?? '',
-    createdAt: row.created_at as string,
-    stages: (row.stages as Project['stages']) ?? [],
-  }
-}
+import { toProject } from '@/lib/mappers'
 
 export async function GET() {
   const { data, error } = await getSupabase()

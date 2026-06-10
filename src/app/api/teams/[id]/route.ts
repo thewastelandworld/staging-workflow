@@ -1,19 +1,10 @@
 import { NextResponse } from 'next/server'
 import { getSupabase } from '@/lib/supabase'
 import { v4 as uuid } from 'uuid'
-import type { Team, Member } from '@/lib/types'
+import type { Member } from '@/lib/types'
+import { toTeam } from '@/lib/mappers'
 
 type Params = { params: Promise<{ id: string }> }
-
-function toTeam(row: Record<string, unknown>): Team {
-  return {
-    id: row.id as string,
-    name: row.name as string,
-    color: row.color as string,
-    createdAt: row.created_at as string,
-    members: (row.members as Team['members']) ?? [],
-  }
-}
 
 async function getTeamRow(id: string) {
   const { data, error } = await getSupabase()

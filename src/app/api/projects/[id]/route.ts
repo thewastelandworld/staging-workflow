@@ -1,16 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getSupabase } from '@/lib/supabase'
-import type { Project } from '@/lib/types'
-
-function toProject(row: Record<string, unknown>): Project {
-  return {
-    id: row.id as string,
-    name: row.name as string,
-    description: (row.description as string) ?? '',
-    createdAt: row.created_at as string,
-    stages: (row.stages as Project['stages']) ?? [],
-  }
-}
+import { toProject } from '@/lib/mappers'
 
 async function getProject(id: string) {
   const { data, error } = await getSupabase()

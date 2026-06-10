@@ -1,0 +1,162 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+
+const mockFrom = vi.fn()
+vi.mock('@/lib/supabase', () => ({
+  getSupabase: () => ({ from: mockFrom }),
+}))
+vi.mock('uuid', () => ({ v4: () => 'mock-uuid' }))
+
+import { GET, POST } from '../teams/route'
+import { GET as getTeamById, PATCH, DELETE, POST as addMember } from '../teams/[id]/route'
+
+function params(id: string) {
+  return { params: Promise.resolve({ id }) }
+}
+
+const TEAM_ROW = {
+  id: 't1', name: 'Design', color: '#3b82f6',
+  created_at: '2024-01-01', members: [],
+}
+
+describe('GET /api/teams', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it('returns mapped team list', async () => {
+    const q: Record<string, () => unknown> = {}
+    q.select = () => q
+    q.order = () => Promise.resolve({ data: [TEAM_ROW], error: null })
+    mockFrom.mockReturnValue(q)
+
+    const res = await GET()
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body[0]).toMatchObject({ id: 't1', name: 'Design', color: '#3b82f6' })
+  })
+
+  it('returns 500 on error', async () => {
+    const q: Record<string, () => unknown> = {}
+    q.select = () => q
+    q.order = () => Promise.resolve({ data: null, error: { message: 'fail' } })
+    mockFrom.mockReturnValue(q)
+
+    const res = await GET()
+    expect(res.status).toBe(500)
+  })
+})
+
+describe('POST /api/teams', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it('creates team with auto color and returns 201', async () => {
+    const existingQ: Record<string, () => unknown> = {}
+    existingQ.select = () => Promise.resolve({ data: [] })
+
+    const insertQ: Record<string, () => unknown> = {}
+    insertQ.insert = () => Promise.resolve({ error: null })
+
+    mockFrom
+      .mockReturnValueOnce(existingQ)
+      .mockReturnValueOnce(insertQ)
+
+    const req = new Request('http://localhost/api/teams', {
+      method: 'POST',
+      body: JSON.stringify({ name: 'New Team' }),
+    })
+
+    const res = await POST(req)
+    expect(res.status).toBe(201)
+    const body = await res.json()
+    expect(body.id).toBe('mock-uuid')
+    expect(body.name).toBe('New Team')
+    expect(body.color).toBe('#3b82f6') // first color
+    expect(body.members).toEqual([])
+  })
+
+  it('uses provided color when given', async () => {
+    const existingQ: Record<string, () => unknown> = {}
+    existingQ.select = () => Promise.resolve({ data: [] })
+
+    const insertQ: Record<string, () => unknown> = {}
+    insertQ.insert = () => Promise.resolve({ error: null })
+
+    mockFrom
+      .mockReturnValueOnce(existingQ)
+      .mockReturnValueOnce(insertQ)
+
+    const req = new Request('http://localhost/api/teams', {
+      method: 'POST',
+      body: JSON.stringify({ name: 'Custom Color', color: '#ff0000' }),
+    })
+
+    const res = await POST(req)
+    const body = await res.json()
+    expect(body.color).toBe('#ff0000')
+  })
+})
+
+describe('PATCH /api/teams/[id]', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it('updates name and color', async () => {
+    const q: Record<string, () => unknown> = {}
+    q.update = () => q
+    q.eq = () => q
+    q.select = () => q
+    q.single = () => Promise.resolve({ data: { ...TEAM_ROW, name: 'Updated' }, error: null })
+    mockFrom.mockReturnValue(q)
+
+    const req = new Request('http://localhost', {
+      method: 'PATCH',
+      body: JSON.stringify({ name: 'Updated', color: '#000' }),
+    })
+    const res = await PATCH(req, params('t1'))
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.name).toBe('Updated')
+  })
+})
+
+describe('DELETE /api/teams/[id]', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it('returns ok', async () => {
+    const q: Record<string, () => unknown> = {}
+    q.delete = () => q
+    q.eq = () => Promise.resolve({ error: null })
+    mockFrom.mockReturnValue(q)
+
+    const res = await DELETE(new Request('http://localhost'), params('t1'))
+    expect(res.status).toBe(200)
+    expect(await res.json()).toMatchObject({ ok: true })
+  })
+})
+
+describe('POST /api/teams/[id] (add member)', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it('adds member and returns 201', async () => {
+    const getQ: Record<string, () => unknown> = {}
+    getQ.select = () => getQ
+    getQ.eq = () => getQ
+    getQ.single = () => Promise.resolve({ data: { ...TEAM_ROW, members: [] }, error: null })
+
+    const updateQ: Record<string, () => unknown> = {}
+    updateQ.update = () => updateQ
+    updateQ.eq = () => Promise.resolve({ error: null })
+
+    mockFrom
+      .mockReturnValueOnce(getQ)
+      .mockReturnValueOnce(updateQ)
+
+    const req = new Request('http://localhost', {
+      method: 'POST',
+      body: JSON.stringify({ name: 'Bob', email: 'bob@example.com', role: 'Dev' }),
+    })
+    const res = await addMember(req, params('t1'))
+    expect(res.status).toBe(201)
+    const body = await res.json()
+    expect(body.id).toBe('mock-uuid')
+    expect(body.name).toBe('Bob')
+    expect(body.email).toBe('bob@example.com')
+  })
+})
