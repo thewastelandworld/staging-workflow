@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { getSupabase } from '@/lib/getSupabase()'
+import { getSupabase } from '@/lib/supabase'
 import type { Project } from '@/lib/types'
 
 function toProject(row: Record<string, unknown>): Project {

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { getSupabase } from '@/lib/getSupabase()'
+import { getSupabase } from '@/lib/supabase'
 import { v4 as uuid } from 'uuid'
 import type { Stage } from '@/lib/types'
 

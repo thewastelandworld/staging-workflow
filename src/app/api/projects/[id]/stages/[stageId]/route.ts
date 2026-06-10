@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { getSupabase } from '@/lib/getSupabase()'
+import { getSupabase } from '@/lib/supabase'
 import { sendStageStartEmail, sendReviewerEmail } from '@/lib/email'
 import type { Stage, StageStatus, Team } from '@/lib/types'
 
