@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { getSupabase } from '@/lib/getSupabase()'
 import { v4 as uuid } from 'uuid'
 import type { Stage } from '@/lib/types'
 
@@ -7,7 +7,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const { id } = await params
   const body = await req.json()
 
-  const { data: row, error: fetchErr } = await supabase
+  const { data: row, error: fetchErr } = await getSupabase()
     .from('projects')
     .select('stages')
     .eq('id', id)
@@ -29,7 +29,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   const stages: Stage[] = [...(row.stages as Stage[]), stage].sort((a, b) => a.order - b.order)
 
-  const { error: updateErr } = await supabase
+  const { error: updateErr } = await getSupabase()
     .from('projects')
     .update({ stages })
     .eq('id', id)

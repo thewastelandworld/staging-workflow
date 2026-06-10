@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { getSupabase } from '@/lib/getSupabase()'
 import { sendStageStartEmail, sendReviewerEmail } from '@/lib/email'
 import type { Stage, StageStatus, Team } from '@/lib/types'
 
 type Params = { params: Promise<{ id: string; stageId: string }> }
 
 async function getProjectRow(id: string) {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from('projects')
     .select('*')
     .eq('id', id)
@@ -16,7 +16,7 @@ async function getProjectRow(id: string) {
 }
 
 async function getTeams(): Promise<Team[]> {
-  const { data } = await supabase.from('teams').select('*')
+  const { data } = await getSupabase().from('teams').select('*')
   return (data ?? []).map((row: Record<string, unknown>) => ({
     id: row.id as string,
     name: row.name as string,
@@ -27,7 +27,7 @@ async function getTeams(): Promise<Team[]> {
 }
 
 async function saveStages(projectId: string, stages: Stage[]) {
-  const { error } = await supabase
+  const { error } = await getSupabase()
     .from('projects')
     .update({ stages })
     .eq('id', projectId)

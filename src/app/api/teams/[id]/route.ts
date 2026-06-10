@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { getSupabase } from '@/lib/getSupabase()'
 import { v4 as uuid } from 'uuid'
 import type { Team, Member } from '@/lib/types'
 
@@ -16,7 +16,7 @@ function toTeam(row: Record<string, unknown>): Team {
 }
 
 async function getTeamRow(id: string) {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from('teams')
     .select('*')
     .eq('id', id)
@@ -29,7 +29,7 @@ async function getTeamRow(id: string) {
 export async function PATCH(req: Request, { params }: Params) {
   const { id } = await params
   const body = await req.json()
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from('teams')
     .update(body.members !== undefined
       ? { members: body.members }
@@ -43,7 +43,7 @@ export async function PATCH(req: Request, { params }: Params) {
 
 export async function DELETE(_req: Request, { params }: Params) {
   const { id } = await params
-  const { error } = await supabase.from('teams').delete().eq('id', id)
+  const { error } = await getSupabase().from('teams').delete().eq('id', id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
 }
@@ -64,7 +64,7 @@ export async function POST(req: Request, { params }: Params) {
   }
   const members: Member[] = [...((row.members as Member[]) ?? []), member]
 
-  const { error } = await supabase
+  const { error } = await getSupabase()
     .from('teams')
     .update({ members })
     .eq('id', id)

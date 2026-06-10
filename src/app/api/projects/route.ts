@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { getSupabase } from '@/lib/getSupabase()'
 import { v4 as uuid } from 'uuid'
 import type { Project } from '@/lib/types'
 
@@ -14,7 +14,7 @@ function toProject(row: Record<string, unknown>): Project {
 }
 
 export async function GET() {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from('projects')
     .select('*')
     .order('created_at', { ascending: false })
@@ -31,7 +31,7 @@ export async function POST(req: Request) {
     created_at: new Date().toISOString(),
     stages: [],
   }
-  const { error } = await supabase.from('projects').insert(project)
+  const { error } = await getSupabase().from('projects').insert(project)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json(toProject(project), { status: 201 })
 }
