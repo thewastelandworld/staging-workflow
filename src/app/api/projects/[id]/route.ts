@@ -1,29 +1,50 @@
 import { NextResponse } from 'next/server'
-import { readDB, writeDB } from '@/lib/db'
+import { supabase } from '@/lib/supabase'
+import type { Project } from '@/lib/types'
+
+function toProject(row: Record<string, unknown>): Project {
+  return {
+    id: row.id as string,
+    name: row.name as string,
+    description: (row.description as string) ?? '',
+    createdAt: row.created_at as string,
+    stages: (row.stages as Project['stages']) ?? [],
+  }
+}
+
+async function getProject(id: string) {
+  const { data, error } = await supabase
+    .from('projects')
+    .select('*')
+    .eq('id', id)
+    .single()
+  if (error || !data) return null
+  return data
+}
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const db = readDB()
-  const project = db.projects.find((p) => p.id === id)
-  if (!project) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-  return NextResponse.json(project)
+  const row = await getProject(id)
+  if (!row) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  return NextResponse.json(toProject(row))
 }
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const body = await req.json()
-  const db = readDB()
-  const idx = db.projects.findIndex((p) => p.id === id)
-  if (idx === -1) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-  db.projects[idx] = { ...db.projects[idx], ...body }
-  writeDB(db)
-  return NextResponse.json(db.projects[idx])
+  const { data, error } = await supabase
+    .from('projects')
+    .update({ name: body.name, description: body.description })
+    .eq('id', id)
+    .select()
+    .single()
+  if (error || !data) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  return NextResponse.json(toProject(data))
 }
 
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const db = readDB()
-  db.projects = db.projects.filter((p) => p.id !== id)
-  writeDB(db)
+  const { error } = await supabase.from('projects').delete().eq('id', id)
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
 }

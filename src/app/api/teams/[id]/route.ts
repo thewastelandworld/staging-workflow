@@ -1,25 +1,50 @@
 import { NextResponse } from 'next/server'
-import { readDB, writeDB } from '@/lib/db'
+import { supabase } from '@/lib/supabase'
 import { v4 as uuid } from 'uuid'
+import type { Team, Member } from '@/lib/types'
 
 type Params = { params: Promise<{ id: string }> }
 
+function toTeam(row: Record<string, unknown>): Team {
+  return {
+    id: row.id as string,
+    name: row.name as string,
+    color: row.color as string,
+    createdAt: row.created_at as string,
+    members: (row.members as Team['members']) ?? [],
+  }
+}
+
+async function getTeamRow(id: string) {
+  const { data, error } = await supabase
+    .from('teams')
+    .select('*')
+    .eq('id', id)
+    .single()
+  if (error || !data) return null
+  return data
+}
+
+// Update team fields (name, color) or replace members array
 export async function PATCH(req: Request, { params }: Params) {
   const { id } = await params
   const body = await req.json()
-  const db = readDB()
-  const idx = db.teams.findIndex((t) => t.id === id)
-  if (idx === -1) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-  db.teams[idx] = { ...db.teams[idx], ...body }
-  writeDB(db)
-  return NextResponse.json(db.teams[idx])
+  const { data, error } = await supabase
+    .from('teams')
+    .update(body.members !== undefined
+      ? { members: body.members }
+      : { name: body.name, color: body.color })
+    .eq('id', id)
+    .select()
+    .single()
+  if (error || !data) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  return NextResponse.json(toTeam(data))
 }
 
 export async function DELETE(_req: Request, { params }: Params) {
   const { id } = await params
-  const db = readDB()
-  db.teams = db.teams.filter((t) => t.id !== id)
-  writeDB(db)
+  const { error } = await supabase.from('teams').delete().eq('id', id)
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
 }
 
@@ -27,17 +52,23 @@ export async function DELETE(_req: Request, { params }: Params) {
 export async function POST(req: Request, { params }: Params) {
   const { id } = await params
   const body = await req.json()
-  const db = readDB()
-  const team = db.teams.find((t) => t.id === id)
-  if (!team) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  const member = {
+  const row = await getTeamRow(id)
+  if (!row) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+
+  const member: Member = {
     id: uuid(),
-    name: body.name,
-    email: body.email,
-    role: body.role ?? '',
+    name: body.name as string,
+    email: body.email as string,
+    role: (body.role as string) ?? '',
   }
-  team.members.push(member)
-  writeDB(db)
+  const members: Member[] = [...((row.members as Member[]) ?? []), member]
+
+  const { error } = await supabase
+    .from('teams')
+    .update({ members })
+    .eq('id', id)
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
   return NextResponse.json(member, { status: 201 })
 }

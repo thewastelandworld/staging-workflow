@@ -1,30 +1,40 @@
 import { NextResponse } from 'next/server'
-import { readDB, writeDB } from '@/lib/db'
+import { supabase } from '@/lib/supabase'
 import { v4 as uuid } from 'uuid'
+import type { Team } from '@/lib/types'
 
-const TEAM_COLORS = [
-  '#3b82f6', '#10b981', '#f59e0b', '#ef4444',
-  '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16',
-]
+function toTeam(row: Record<string, unknown>): Team {
+  return {
+    id: row.id as string,
+    name: row.name as string,
+    color: row.color as string,
+    createdAt: row.created_at as string,
+    members: (row.members as Team['members']) ?? [],
+  }
+}
 
 export async function GET() {
-  const db = readDB()
-  return NextResponse.json(db.teams)
+  const { data, error } = await supabase
+    .from('teams')
+    .select('*')
+    .order('created_at', { ascending: true })
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json((data ?? []).map(toTeam))
 }
 
 export async function POST(req: Request) {
   const body = await req.json()
-  const db = readDB()
+  const { data: existing } = await supabase.from('teams').select('id')
+  const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16']
 
   const team = {
     id: uuid(),
-    name: body.name,
-    color: body.color ?? TEAM_COLORS[db.teams.length % TEAM_COLORS.length],
+    name: body.name as string,
+    color: (body.color as string) ?? COLORS[(existing?.length ?? 0) % COLORS.length],
+    created_at: new Date().toISOString(),
     members: [],
-    createdAt: new Date().toISOString(),
   }
-
-  db.teams.push(team)
-  writeDB(db)
-  return NextResponse.json(team, { status: 201 })
+  const { error } = await supabase.from('teams').insert(team)
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json(toTeam(team), { status: 201 })
 }

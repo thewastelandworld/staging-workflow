@@ -1,94 +1,143 @@
 import { NextResponse } from 'next/server'
-import { readDB, writeDB } from '@/lib/db'
+import { supabase } from '@/lib/supabase'
 import { sendStageStartEmail, sendReviewerEmail } from '@/lib/email'
-import type { StageStatus } from '@/lib/types'
+import type { Stage, StageStatus, Team } from '@/lib/types'
 
 type Params = { params: Promise<{ id: string; stageId: string }> }
 
+async function getProjectRow(id: string) {
+  const { data, error } = await supabase
+    .from('projects')
+    .select('*')
+    .eq('id', id)
+    .single()
+  if (error || !data) return null
+  return data
+}
+
+async function getTeams(): Promise<Team[]> {
+  const { data } = await supabase.from('teams').select('*')
+  return (data ?? []).map((row: Record<string, unknown>) => ({
+    id: row.id as string,
+    name: row.name as string,
+    color: row.color as string,
+    createdAt: row.created_at as string,
+    members: (row.members as Team['members']) ?? [],
+  }))
+}
+
+async function saveStages(projectId: string, stages: Stage[]) {
+  const { error } = await supabase
+    .from('projects')
+    .update({ stages })
+    .eq('id', projectId)
+  return error
+}
+
 async function advanceNextStage(
-  db: ReturnType<typeof readDB>,
-  project: (typeof db.projects)[number],
-  stageId: string,
-  stageName: string,
+  projectId: string,
+  projectName: string,
+  stages: Stage[],
+  teams: Team[],
+  completedStageId: string,
+  completedStageName: string,
 ) {
-  const sortedStages = [...project.stages].sort((a, b) => a.order - b.order)
-  const currentIndex = sortedStages.findIndex((s) => s.id === stageId)
-  const nextStage = sortedStages[currentIndex + 1]
+  const sorted = [...stages].sort((a, b) => a.order - b.order)
+  const currentIndex = sorted.findIndex((s) => s.id === completedStageId)
+  const nextStage = sorted[currentIndex + 1]
   if (!nextStage || nextStage.emailSent) return null
 
-  const nextTeam = db.teams.find((t) => t.id === nextStage.teamId)
+  const nextTeam = teams.find((t) => t.id === nextStage.teamId)
   if (!nextTeam || nextTeam.members.length === 0) return null
 
-  const nextIdx = project.stages.findIndex((s) => s.id === nextStage.id)
-  project.stages[nextIdx].status = 'in_progress'
-  project.stages[nextIdx].startedAt = new Date().toISOString()
-  project.stages[nextIdx].emailSent = true
-  writeDB(db)
+  const idx = stages.findIndex((s) => s.id === nextStage.id)
+  stages[idx] = {
+    ...stages[idx],
+    status: 'in_progress',
+    startedAt: new Date().toISOString(),
+    emailSent: true,
+  }
 
-  return sendStageStartEmail(project, project.stages[nextIdx], nextTeam, stageName)
+  const project = { id: projectId, name: projectName, stages, description: '', createdAt: '' }
+  return sendStageStartEmail(project, stages[idx], nextTeam, completedStageName)
 }
 
 export async function PATCH(req: Request, { params }: Params) {
   const { id, stageId } = await params
   const body = await req.json()
-  const db = readDB()
 
-  const project = db.projects.find((p) => p.id === id)
-  if (!project) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  const row = await getProjectRow(id)
+  if (!row) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  const stageIdx = project.stages.findIndex((s) => s.id === stageId)
+  const stages: Stage[] = row.stages ?? []
+  const stageIdx = stages.findIndex((s) => s.id === stageId)
   if (stageIdx === -1) return NextResponse.json({ error: 'Stage not found' }, { status: 404 })
 
-  const stage = project.stages[stageIdx]
+  const stage = stages[stageIdx]
 
-  // Handle reviewer check
+  // ── Reviewer check ──
   if (body.reviewerCheck) {
     const { teamId } = body.reviewerCheck
     const reviewers = [...(stage.reviewers ?? [])]
     const ri = reviewers.findIndex((r) => r.teamId === teamId)
     if (ri !== -1 && !reviewers[ri].checkedAt) {
-      reviewers[ri] = { ...reviewers[ri], checkedAt: new Date().toISOString(), note: body.reviewerCheck.note ?? '' }
+      reviewers[ri] = {
+        ...reviewers[ri],
+        checkedAt: new Date().toISOString(),
+        note: body.reviewerCheck.note ?? '',
+      }
     }
+
     const allChecked = reviewers.every((r) => r.checkedAt)
-    const updated = {
+    stages[stageIdx] = {
       ...stage,
       reviewers,
       status: (allChecked ? 'completed' : stage.status) as StageStatus,
       completedAt: allChecked && !stage.completedAt ? new Date().toISOString() : stage.completedAt,
     }
-    project.stages[stageIdx] = updated
-    writeDB(db)
+
+    const saveErr = await saveStages(id, stages)
+    if (saveErr) return NextResponse.json({ error: saveErr.message }, { status: 500 })
 
     let emailResult = null
+    const teams = await getTeams()
+
     if (allChecked && stage.status !== 'completed') {
-      // 全員確認済み → 次ステージへ
-      emailResult = await advanceNextStage(db, project, stageId, stage.name)
+      emailResult = await advanceNextStage(id, row.name, stages, teams, stageId, stage.name)
+      if (emailResult) await saveStages(id, stages)
     } else if (!allChecked) {
-      // 次のレビュアーへ通知
       const nextReviewer = reviewers.find((r) => !r.checkedAt)
       if (nextReviewer) {
-        const nextTeam = db.teams.find((t) => t.id === nextReviewer.teamId)
-        const prevTeam = db.teams.find((t) => t.id === body.reviewerCheck.teamId)
+        const nextTeam = teams.find((t) => t.id === nextReviewer.teamId)
+        const prevTeam = teams.find((t) => t.id === teamId)
         if (nextTeam && nextTeam.members.length > 0 && prevTeam) {
-          emailResult = await sendReviewerEmail(project, stage, nextReviewer, nextTeam, prevTeam.name)
+          emailResult = await sendReviewerEmail(
+            { id, name: row.name, stages, description: '', createdAt: '' },
+            stage,
+            nextReviewer,
+            nextTeam,
+            prevTeam.name,
+          )
         }
       }
     }
-    return NextResponse.json({ stage: updated, emailResult })
+
+    return NextResponse.json({ stage: stages[stageIdx], emailResult })
   }
 
+  // ── Normal update ──
   const prevStatus = stage.status
   const newStatus: StageStatus = body.status ?? stage.status
-
-  // Update stage — when restarting, clear completedAt and emailSent
   const isRestart = prevStatus === 'completed' && newStatus === 'in_progress'
-  const updated = {
+
+  const updated: Stage = {
     ...stage,
     ...body,
     status: newStatus,
-    startedAt: newStatus === 'in_progress' && !stage.startedAt
-      ? new Date().toISOString()
-      : stage.startedAt,
+    startedAt:
+      newStatus === 'in_progress' && !stage.startedAt
+        ? new Date().toISOString()
+        : stage.startedAt,
     completedAt: isRestart
       ? undefined
       : newStatus === 'completed' && !stage.completedAt
@@ -99,31 +148,35 @@ export async function PATCH(req: Request, { params }: Params) {
       ? (stage.reviewers ?? []).map(({ checkedAt: _c, note: _n, ...rest }) => rest)
       : (body.reviewers ?? stage.reviewers ?? []),
   }
-  // Remove undefined keys so they don't persist in JSON
-  Object.keys(updated).forEach((k) => (updated as Record<string, unknown>)[k] === undefined && delete (updated as Record<string, unknown>)[k])
-  project.stages[stageIdx] = updated as typeof stage
 
-  writeDB(db)
+  // Remove undefined/empty-string problem field and other undefined keys
+  const updatedAny = updated as unknown as Record<string, unknown>
+  if (updatedAny.problem === undefined || updatedAny.problem === '') delete updatedAny.problem
+  Object.keys(updatedAny).forEach((k) => updatedAny[k] === undefined && delete updatedAny[k])
+
+  stages[stageIdx] = updated
+  const saveErr = await saveStages(id, stages)
+  if (saveErr) return NextResponse.json({ error: saveErr.message }, { status: 500 })
 
   let emailResult = null
-
-  // Auto-send email to next team when stage is completed
   if (prevStatus !== 'completed' && newStatus === 'completed') {
-    emailResult = await advanceNextStage(db, project, stageId, stage.name)
+    const teams = await getTeams()
+    emailResult = await advanceNextStage(id, row.name, stages, teams, stageId, stage.name)
+    if (emailResult) await saveStages(id, stages)
   }
 
-  return NextResponse.json({
-    stage: project.stages[stageIdx],
-    emailResult,
-  })
+  return NextResponse.json({ stage: stages[stageIdx], emailResult })
 }
 
 export async function DELETE(_req: Request, { params }: Params) {
   const { id, stageId } = await params
-  const db = readDB()
-  const project = db.projects.find((p) => p.id === id)
-  if (!project) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-  project.stages = project.stages.filter((s) => s.id !== stageId)
-  writeDB(db)
+
+  const row = await getProjectRow(id)
+  if (!row) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+
+  const stages: Stage[] = (row.stages ?? []).filter((s: Stage) => s.id !== stageId)
+  const saveErr2 = await saveStages(id, stages)
+  if (saveErr2) return NextResponse.json({ error: saveErr2.message }, { status: 500 })
+
   return NextResponse.json({ ok: true })
 }
