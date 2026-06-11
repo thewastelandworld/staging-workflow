@@ -3,6 +3,7 @@ import { getSupabase } from '@/lib/supabase'
 import { v4 as uuid } from 'uuid'
 import type { Member } from '@/lib/types'
 import { toTeam } from '@/lib/mappers'
+import { revalidateTag } from 'next/cache'
 
 type Params = { params: Promise<{ id: string }> }
 
@@ -16,7 +17,6 @@ async function getTeamRow(id: string) {
   return data
 }
 
-// Update team fields (name, color) or replace members array
 export async function PATCH(req: Request, { params }: Params) {
   const { id } = await params
   const body = await req.json()
@@ -29,6 +29,7 @@ export async function PATCH(req: Request, { params }: Params) {
     .select()
     .single()
   if (error || !data) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  revalidateTag('teams', { expire: 0 })
   return NextResponse.json(toTeam(data))
 }
 
@@ -36,10 +37,10 @@ export async function DELETE(_req: Request, { params }: Params) {
   const { id } = await params
   const { error } = await getSupabase().from('teams').delete().eq('id', id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  revalidateTag('teams', { expire: 0 })
   return NextResponse.json({ ok: true })
 }
 
-// Add member to team
 export async function POST(req: Request, { params }: Params) {
   const { id } = await params
   const body = await req.json()
@@ -60,6 +61,6 @@ export async function POST(req: Request, { params }: Params) {
     .update({ members })
     .eq('id', id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-
+  revalidateTag('teams', { expire: 0 })
   return NextResponse.json(member, { status: 201 })
 }

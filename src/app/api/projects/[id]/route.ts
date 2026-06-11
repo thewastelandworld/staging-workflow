@@ -1,8 +1,12 @@
 import { NextResponse } from 'next/server'
 import { getSupabase } from '@/lib/supabase'
 import { toProject } from '@/lib/mappers'
+import { cacheLife, cacheTag, revalidateTag } from 'next/cache'
 
-async function getProject(id: string) {
+async function fetchProject(id: string) {
+  'use cache'
+  cacheLife('minutes')
+  cacheTag('projects', `project-${id}`)
   const { data, error } = await getSupabase()
     .from('projects')
     .select('*')
@@ -14,7 +18,7 @@ async function getProject(id: string) {
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const row = await getProject(id)
+  const row = await fetchProject(id)
   if (!row) return NextResponse.json({ error: 'Not found' }, { status: 404 })
   return NextResponse.json(toProject(row))
 }
@@ -29,6 +33,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     .select()
     .single()
   if (error || !data) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  revalidateTag('projects', { expire: 0 })
+  revalidateTag(`project-${id}`, { expire: 0 })
   return NextResponse.json(toProject(data))
 }
 
@@ -36,5 +42,7 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   const { id } = await params
   const { error } = await getSupabase().from('projects').delete().eq('id', id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  revalidateTag('projects', { expire: 0 })
+  revalidateTag(`project-${id}`, { expire: 0 })
   return NextResponse.json({ ok: true })
 }

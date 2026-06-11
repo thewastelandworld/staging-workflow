@@ -5,9 +5,14 @@ vi.mock('@/lib/supabase', () => ({
   getSupabase: () => ({ from: mockFrom }),
 }))
 vi.mock('uuid', () => ({ v4: () => 'mock-uuid' }))
+vi.mock('next/cache', () => ({
+  cacheLife: vi.fn(),
+  cacheTag: vi.fn(),
+  revalidateTag: vi.fn(),
+}))
 
 import { GET, POST } from '../teams/route'
-import { GET as getTeamById, PATCH, DELETE, POST as addMember } from '../teams/[id]/route'
+import { PATCH, DELETE, POST as addMember } from '../teams/[id]/route'
 
 function params(id: string) {
   return { params: Promise.resolve({ id }) }

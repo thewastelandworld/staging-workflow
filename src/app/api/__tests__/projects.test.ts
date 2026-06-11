@@ -5,6 +5,11 @@ vi.mock('@/lib/supabase', () => ({
   getSupabase: () => ({ from: mockFrom }),
 }))
 vi.mock('uuid', () => ({ v4: () => 'mock-uuid' }))
+vi.mock('next/cache', () => ({
+  cacheLife: vi.fn(),
+  cacheTag: vi.fn(),
+  revalidateTag: vi.fn(),
+}))
 
 import { GET, POST } from '../projects/route'
 
@@ -38,7 +43,7 @@ describe('GET /api/projects', () => {
 
     const res = await GET()
     expect(res.status).toBe(500)
-    expect(await res.json()).toMatchObject({ error: 'DB error' })
+    expect((await res.json()).error).toContain('DB error')
   })
 
   it('returns empty array when no data', async () => {

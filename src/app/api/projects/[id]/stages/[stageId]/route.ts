@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getSupabase } from '@/lib/supabase'
 import { sendStageStartEmail, sendReviewerEmail } from '@/lib/email'
 import type { Stage, StageStatus, Team } from '@/lib/types'
+import { revalidateTag } from 'next/cache'
 
 type Params = { params: Promise<{ id: string; stageId: string }> }
 
@@ -165,6 +166,8 @@ export async function PATCH(req: Request, { params }: Params) {
     if (emailResult) await saveStages(id, stages)
   }
 
+  revalidateTag('projects', { expire: 0 })
+  revalidateTag(`project-${id}`, { expire: 0 })
   return NextResponse.json({ stage: stages[stageIdx], emailResult })
 }
 
@@ -178,5 +181,7 @@ export async function DELETE(_req: Request, { params }: Params) {
   const saveErr2 = await saveStages(id, stages)
   if (saveErr2) return NextResponse.json({ error: saveErr2.message }, { status: 500 })
 
+  revalidateTag('projects', { expire: 0 })
+  revalidateTag(`project-${id}`, { expire: 0 })
   return NextResponse.json({ ok: true })
 }

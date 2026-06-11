@@ -4,6 +4,11 @@ const mockFrom = vi.fn()
 vi.mock('@/lib/supabase', () => ({
   getSupabase: () => ({ from: mockFrom }),
 }))
+vi.mock('next/cache', () => ({
+  cacheLife: vi.fn(),
+  cacheTag: vi.fn(),
+  revalidateTag: vi.fn(),
+}))
 
 import { GET, PATCH, DELETE } from '../projects/[id]/route'
 
