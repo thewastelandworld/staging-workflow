@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, use } from 'react'
+import { useEffect, useState, use, Suspense } from 'react'
 import Link from 'next/link'
 import type { Project, Team, Stage } from '@/lib/types'
 import StageTimeline from '@/components/StageTimeline'
@@ -9,7 +9,15 @@ import { useDarkMode } from '@/components/DarkModeProvider'
 import { useLanguage } from '@/components/LanguageProvider'
 import { LOCALES, type Locale } from '@/lib/i18n'
 
-export default function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
+export default function ProjectPageWrapper({ params }: { params: Promise<{ id: string }> }) {
+  return (
+    <Suspense>
+      <ProjectPage params={params} />
+    </Suspense>
+  )
+}
+
+function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const { isDark, toggle: toggleDark } = useDarkMode()
   const { t, locale, setLocale } = useLanguage()
