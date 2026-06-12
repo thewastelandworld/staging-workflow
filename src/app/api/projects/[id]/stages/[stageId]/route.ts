@@ -3,6 +3,7 @@ import { getSupabase } from '@/lib/supabase'
 import { sendStageStartEmail, sendReviewerEmail } from '@/lib/email'
 import type { Stage, StageStatus, Team } from '@/lib/types'
 import { revalidateTag } from 'next/cache'
+import { log } from '@/lib/logger'
 
 type Params = { params: Promise<{ id: string; stageId: string }> }
 
@@ -46,10 +47,21 @@ async function advanceNextStage(
   const sorted = [...stages].sort((a, b) => a.order - b.order)
   const currentIndex = sorted.findIndex((s) => s.id === completedStageId)
   const nextStage = sorted[currentIndex + 1]
-  if (!nextStage || nextStage.emailSent) return null
+  if (!nextStage) {
+    log.info('All stages completed, no next stage', { projectId, completedStageName })
+    return null
+  }
+  if (nextStage.emailSent) return null
 
   const nextTeam = teams.find((t) => t.id === nextStage.teamId)
-  if (!nextTeam || nextTeam.members.length === 0) return null
+  if (!nextTeam) {
+    log.warn('Next stage has no team assigned', { projectId, nextStageId: nextStage.id })
+    return null
+  }
+  if (nextTeam.members.length === 0) {
+    log.warn('Next stage team has no members', { projectId, nextStageId: nextStage.id, teamId: nextTeam.id })
+    return null
+  }
 
   const idx = stages.findIndex((s) => s.id === nextStage.id)
   stages[idx] = {
@@ -60,7 +72,14 @@ async function advanceNextStage(
   }
 
   const project = { id: projectId, name: projectName, stages, description: '', createdAt: '' }
-  return sendStageStartEmail(project, stages[idx], nextTeam, completedStageName)
+  const result = await sendStageStartEmail(project, stages[idx], nextTeam, completedStageName)
+
+  if (result.success) {
+    log.info('Stage start email sent', { projectId, nextStageId: nextStage.id, team: nextTeam.name, previewUrl: result.previewUrl })
+  } else {
+    log.error('Stage start email failed', { projectId, nextStageId: nextStage.id, error: result.error })
+  }
+  return result
 }
 
 export async function PATCH(req: Request, { params }: Params) {
@@ -68,11 +87,17 @@ export async function PATCH(req: Request, { params }: Params) {
   const body = await req.json()
 
   const row = await getProjectRow(id)
-  if (!row) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  if (!row) {
+    log.warn('Project not found', { projectId: id })
+    return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  }
 
   const stages: Stage[] = row.stages ?? []
   const stageIdx = stages.findIndex((s) => s.id === stageId)
-  if (stageIdx === -1) return NextResponse.json({ error: 'Stage not found' }, { status: 404 })
+  if (stageIdx === -1) {
+    log.warn('Stage not found', { projectId: id, stageId })
+    return NextResponse.json({ error: 'Stage not found' }, { status: 404 })
+  }
 
   const stage = stages[stageIdx]
 
@@ -87,6 +112,7 @@ export async function PATCH(req: Request, { params }: Params) {
         checkedAt: new Date().toISOString(),
         note: body.reviewerCheck.note ?? '',
       }
+      log.info('Reviewer checked', { projectId: id, stageId, stageName: stage.name, teamId })
     }
 
     const allChecked = reviewers.every((r) => r.checkedAt)
@@ -97,8 +123,15 @@ export async function PATCH(req: Request, { params }: Params) {
       completedAt: allChecked && !stage.completedAt ? new Date().toISOString() : stage.completedAt,
     }
 
+    if (allChecked) {
+      log.info('All reviewers completed, stage done', { projectId: id, stageId, stageName: stage.name })
+    }
+
     const saveErr = await saveStages(id, stages)
-    if (saveErr) return NextResponse.json({ error: saveErr.message }, { status: 500 })
+    if (saveErr) {
+      log.error('Failed to save reviewer check', { projectId: id, stageId, error: saveErr.message })
+      return NextResponse.json({ error: saveErr.message }, { status: 500 })
+    }
 
     let emailResult = null
     const teams = await getTeams()
@@ -119,6 +152,11 @@ export async function PATCH(req: Request, { params }: Params) {
             nextTeam,
             prevTeam.name,
           )
+          if (emailResult?.success) {
+            log.info('Reviewer email sent', { projectId: id, stageId, nextTeam: nextTeam.name, previewUrl: emailResult.previewUrl })
+          } else {
+            log.error('Reviewer email failed', { projectId: id, stageId, error: emailResult?.error })
+          }
         }
       }
     }
@@ -130,6 +168,13 @@ export async function PATCH(req: Request, { params }: Params) {
   const prevStatus = stage.status
   const newStatus: StageStatus = body.status ?? stage.status
   const isRestart = prevStatus === 'completed' && newStatus === 'in_progress'
+
+  if (prevStatus !== newStatus) {
+    log.info('Stage status changed', { projectId: id, stageId, stageName: stage.name, prevStatus, newStatus })
+  }
+  if (isRestart) {
+    log.warn('Stage restarted', { projectId: id, stageId, stageName: stage.name })
+  }
 
   const updated: Stage = {
     ...stage,
@@ -157,7 +202,10 @@ export async function PATCH(req: Request, { params }: Params) {
 
   stages[stageIdx] = updated
   const saveErr = await saveStages(id, stages)
-  if (saveErr) return NextResponse.json({ error: saveErr.message }, { status: 500 })
+  if (saveErr) {
+    log.error('Failed to update stage', { projectId: id, stageId, error: saveErr.message })
+    return NextResponse.json({ error: saveErr.message }, { status: 500 })
+  }
 
   let emailResult = null
   if (prevStatus !== 'completed' && newStatus === 'completed') {
@@ -175,13 +223,21 @@ export async function DELETE(_req: Request, { params }: Params) {
   const { id, stageId } = await params
 
   const row = await getProjectRow(id)
-  if (!row) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  if (!row) {
+    log.warn('Project not found when deleting stage', { projectId: id, stageId })
+    return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  }
 
+  const stageName = (row.stages as Stage[]).find((s: Stage) => s.id === stageId)?.name
   const stages: Stage[] = (row.stages ?? []).filter((s: Stage) => s.id !== stageId)
   const saveErr2 = await saveStages(id, stages)
-  if (saveErr2) return NextResponse.json({ error: saveErr2.message }, { status: 500 })
+  if (saveErr2) {
+    log.error('Failed to delete stage', { projectId: id, stageId, error: saveErr2.message })
+    return NextResponse.json({ error: saveErr2.message }, { status: 500 })
+  }
 
   revalidateTag('projects', { expire: 0 })
   revalidateTag(`project-${id}`, { expire: 0 })
+  log.info('Stage deleted', { projectId: id, stageId, stageName })
   return NextResponse.json({ ok: true })
 }

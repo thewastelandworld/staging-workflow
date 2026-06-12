@@ -3,6 +3,7 @@ import { getSupabase } from '@/lib/supabase'
 import { v4 as uuid } from 'uuid'
 import type { Stage } from '@/lib/types'
 import { revalidateTag } from 'next/cache'
+import { log } from '@/lib/logger'
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -13,7 +14,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     .select('stages')
     .eq('id', id)
     .single()
-  if (fetchErr || !row) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  if (fetchErr || !row) {
+    log.warn('Project not found when adding stage', { projectId: id })
+    return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  }
 
   const stage: Stage = {
     id: uuid(),
@@ -34,9 +38,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     .from('projects')
     .update({ stages })
     .eq('id', id)
-  if (updateErr) return NextResponse.json({ error: updateErr.message }, { status: 500 })
+  if (updateErr) {
+    log.error('Failed to add stage', { projectId: id, stageName: stage.name, error: updateErr.message })
+    return NextResponse.json({ error: updateErr.message }, { status: 500 })
+  }
 
   revalidateTag('projects', { expire: 0 })
   revalidateTag(`project-${id}`, { expire: 0 })
+  log.info('Stage added', { projectId: id, stageId: stage.id, name: stage.name, order: stage.order })
   return NextResponse.json(stage, { status: 201 })
 }

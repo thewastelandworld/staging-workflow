@@ -4,6 +4,7 @@ import { v4 as uuid } from 'uuid'
 import type { Member } from '@/lib/types'
 import { toTeam } from '@/lib/mappers'
 import { revalidateTag } from 'next/cache'
+import { log } from '@/lib/logger'
 
 type Params = { params: Promise<{ id: string }> }
 
@@ -28,16 +29,24 @@ export async function PATCH(req: Request, { params }: Params) {
     .eq('id', id)
     .select()
     .single()
-  if (error || !data) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  if (error || !data) {
+    log.error('Failed to update team', { id, error: error?.message })
+    return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  }
   revalidateTag('teams', { expire: 0 })
+  log.info('Team updated', { id, name: body.name })
   return NextResponse.json(toTeam(data))
 }
 
 export async function DELETE(_req: Request, { params }: Params) {
   const { id } = await params
   const { error } = await getSupabase().from('teams').delete().eq('id', id)
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) {
+    log.error('Failed to delete team', { id, error: error.message })
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
   revalidateTag('teams', { expire: 0 })
+  log.info('Team deleted', { id })
   return NextResponse.json({ ok: true })
 }
 
@@ -46,7 +55,10 @@ export async function POST(req: Request, { params }: Params) {
   const body = await req.json()
 
   const row = await getTeamRow(id)
-  if (!row) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  if (!row) {
+    log.warn('Team not found when adding member', { teamId: id })
+    return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  }
 
   const member: Member = {
     id: uuid(),
@@ -60,7 +72,11 @@ export async function POST(req: Request, { params }: Params) {
     .from('teams')
     .update({ members })
     .eq('id', id)
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) {
+    log.error('Failed to add member', { teamId: id, memberName: member.name, error: error.message })
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
   revalidateTag('teams', { expire: 0 })
+  log.info('Member added', { teamId: id, memberId: member.id, name: member.name })
   return NextResponse.json(member, { status: 201 })
 }

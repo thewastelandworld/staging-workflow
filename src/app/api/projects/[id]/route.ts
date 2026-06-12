@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getSupabase } from '@/lib/supabase'
 import { toProject } from '@/lib/mappers'
 import { cacheLife, cacheTag, revalidateTag } from 'next/cache'
+import { log } from '@/lib/logger'
 
 async function fetchProject(id: string) {
   'use cache'
@@ -19,7 +20,10 @@ async function fetchProject(id: string) {
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const row = await fetchProject(id)
-  if (!row) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  if (!row) {
+    log.warn('Project not found', { id })
+    return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  }
   return NextResponse.json(toProject(row))
 }
 
@@ -32,17 +36,25 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     .eq('id', id)
     .select()
     .single()
-  if (error || !data) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  if (error || !data) {
+    log.error('Failed to update project', { id, error: error?.message })
+    return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  }
   revalidateTag('projects', { expire: 0 })
   revalidateTag(`project-${id}`, { expire: 0 })
+  log.info('Project updated', { id, name: body.name })
   return NextResponse.json(toProject(data))
 }
 
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const { error } = await getSupabase().from('projects').delete().eq('id', id)
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) {
+    log.error('Failed to delete project', { id, error: error.message })
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
   revalidateTag('projects', { expire: 0 })
   revalidateTag(`project-${id}`, { expire: 0 })
+  log.info('Project deleted', { id })
   return NextResponse.json({ ok: true })
 }

@@ -3,6 +3,7 @@ import { getSupabase } from '@/lib/supabase'
 import { v4 as uuid } from 'uuid'
 import { toTeam } from '@/lib/mappers'
 import { cacheLife, cacheTag, revalidateTag } from 'next/cache'
+import { log } from '@/lib/logger'
 
 async function fetchTeams() {
   'use cache'
@@ -20,6 +21,7 @@ export async function GET() {
   try {
     return NextResponse.json(await fetchTeams())
   } catch (e) {
+    log.error('Failed to fetch teams', { error: String(e) })
     return NextResponse.json({ error: String(e) }, { status: 500 })
   }
 }
@@ -37,7 +39,11 @@ export async function POST(req: Request) {
     members: [],
   }
   const { error } = await getSupabase().from('teams').insert(team)
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) {
+    log.error('Failed to create team', { name: team.name, error: error.message })
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
   revalidateTag('teams', { expire: 0 })
+  log.info('Team created', { id: team.id, name: team.name, color: team.color })
   return NextResponse.json(toTeam(team), { status: 201 })
 }
