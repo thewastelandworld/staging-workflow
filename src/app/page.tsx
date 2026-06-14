@@ -187,9 +187,10 @@ export default function DashboardPage() {
                     const overdueCount = p.stages.filter(
                       (s: Stage) => s.status !== 'completed' && new Date(s.deadline) < now
                     ).length
-                    const problemCount = p.stages.filter(
+                    const problemStages = p.stages.filter(
                       (s: Stage) => s.status !== 'completed' && s.problem
-                    ).length
+                    )
+                    const problemCount = problemStages.length
                     const doneCount = p.stages.filter((s: Stage) => s.status === 'completed').length
                     const progress = p.stages.length > 0 ? (doneCount / p.stages.length) * 100 : 0
 
@@ -204,6 +205,16 @@ export default function DashboardPage() {
                             className="font-semibold text-gray-900 hover:text-blue-600 transition-colors">
                             {p.name}
                           </Link>
+                          {problemStages.length > 0 && (
+                            <div className="mt-1.5 space-y-0.5">
+                              {problemStages.map((s) => (
+                                <div key={s.id} className="text-xs text-orange-700">
+                                  <span className="font-medium">{s.name}:</span>{' '}
+                                  <span className="text-orange-600">{s.problem!.length > 60 ? s.problem!.slice(0, 60) + '…' : s.problem}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </td>
                         <td className="px-5 py-4 text-gray-400 max-w-xs truncate">
                           {p.description || <span className="text-gray-300">—</span>}
@@ -258,9 +269,10 @@ export default function DashboardPage() {
                 const overdueCount = p.stages.filter(
                   (s: Stage) => s.status !== 'completed' && new Date(s.deadline) < now
                 ).length
-                const problemCount = p.stages.filter(
+                const problemStages = p.stages.filter(
                   (s: Stage) => s.status !== 'completed' && s.problem
-                ).length
+                )
+                const problemCount = problemStages.length
                 const doneCount = p.stages.filter((s: Stage) => s.status === 'completed').length
                 const progress = p.stages.length > 0 ? (doneCount / p.stages.length) * 100 : 0
 
@@ -281,6 +293,17 @@ export default function DashboardPage() {
 
                     {p.description && (
                       <p className="text-sm text-gray-400 mt-1 line-clamp-2">{p.description}</p>
+                    )}
+
+                    {problemStages.length > 0 && (
+                      <div className="mt-2 space-y-0.5">
+                        {problemStages.map((s) => (
+                          <div key={s.id} className="text-xs text-orange-700">
+                            <span className="font-medium">{s.name}:</span>{' '}
+                            <span className="text-orange-600">{s.problem!.length > 50 ? s.problem!.slice(0, 50) + '…' : s.problem}</span>
+                          </div>
+                        ))}
+                      </div>
                     )}
 
                     <div className="flex flex-wrap gap-1.5 mt-2">

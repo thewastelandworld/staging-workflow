@@ -253,7 +253,7 @@ export default function StageTimeline({ project, teams, onStageUpdate, onStageDe
                       </div>
                       <div>
                         <label className="text-xs text-gray-500 block mb-1">{t.description}</label>
-                        <input className={inputCls} value={editForm.description}
+                        <textarea className={inputCls} value={editForm.description} rows={3}
                           onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} />
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -300,8 +300,8 @@ export default function StageTimeline({ project, teams, onStageUpdate, onStageDe
                                     )}
                                   </div>
                                   <textarea
-                                    className="w-full px-2 py-1.5 border border-gray-200 rounded text-xs text-black focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"
-                                    rows={2} placeholder={t.checkContentPlaceholder}
+                                    className="w-full px-2 py-1.5 border border-gray-200 rounded text-xs text-black focus:outline-none focus:ring-2 focus:ring-blue-400"
+                                    rows={3} placeholder={t.checkContentPlaceholder}
                                     value={reviewer.checkContent}
                                     onChange={(e) => updateEditCheckContent(reviewer.teamId, e.target.value)}
                                   />
@@ -357,7 +357,7 @@ export default function StageTimeline({ project, teams, onStageUpdate, onStageDe
                       </div>
 
                       {stage.description && (
-                        <p className="text-sm text-gray-500 mt-1">{stage.description}</p>
+                        <p className="text-sm text-gray-500 mt-1 whitespace-pre-wrap">{stage.description}</p>
                       )}
 
                       {/* Problem display / input */}
@@ -491,7 +491,7 @@ export default function StageTimeline({ project, teams, onStageUpdate, onStageDe
                                   {isActiveReviewer && (status === 'in_progress' || status === 'overdue') && (
                                     <div className="ml-6 space-y-1.5">
                                       {reviewer.checkContent && (
-                                        <div className="px-2 py-1.5 bg-blue-50 border border-blue-100 rounded text-xs text-blue-800">
+                                        <div className="px-2 py-1.5 bg-blue-50 border border-blue-100 rounded text-xs text-blue-800 whitespace-pre-wrap">
                                           <span className="font-medium">{t.checkContentLabel}: </span>{reviewer.checkContent}
                                         </div>
                                       )}

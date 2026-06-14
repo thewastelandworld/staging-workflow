@@ -124,6 +124,31 @@ const t = {
     deleteTeamConfirm: 'チームを削除しますか？',
     membersCount: (n: number) => `${n}名`,
 
+    // CSV import
+    singleTab: '単体追加',
+    csvTab: 'CSV一括追加',
+    csvFormatHint: '列順: ステージ名, 説明, チーム名, 締め切り (YYYY-MM-DD), 確認チーム1, 確認内容1, 確認チーム2, 確認内容2, ... (確認チームは省略可)',
+    csvPastePlaceholder: 'ステージ名,説明,チーム名,締め切り,確認チーム1,確認内容1\n設計レビュー,デザイン確認,デザインチーム,2025-03-01,開発チーム,"・仕様確認\n・動作確認"\n...',
+    csvAvailableTeams: '利用可能なチーム:',
+    csvParseBtnLabel: 'プレビュー',
+    csvNoValidRows: '有効な行がありません',
+    csvImportBtnLabel: (n: number) => `${n}件をインポート`,
+    csvImportingLabel: 'インポート中...',
+    csvDownloadSample: 'サンプルCSVをダウンロード',
+    xlsxDownloadSample: 'サンプルExcelをダウンロード',
+    fileUploadLabel: 'ファイルを選択 (CSV / Excel)',
+    fileUploadHint: 'またはCSVをテキストで貼り付け',
+
+    // Bulk check content editor
+    bulkEditBtn: '確認内容を一括編集',
+    bulkEditSelectTeam: '確認チームを選択',
+    bulkEditApplyAllLabel: '全ステージに同じ内容を適用:',
+    bulkEditApplyAllBtn: '全ステージに適用',
+    bulkEditNoPending: 'この確認チームの待機中ステージはありません',
+    bulkEditSaveBtn: (n: number) => `${n}件を一括保存`,
+    bulkEditSaving: '保存中...',
+    bulkEditDone: (n: number) => `${n}件を更新しました`,
+
     // Status badge
     statusPending: '待機中',
     statusInProgress: '進行中',
@@ -239,6 +264,31 @@ const t = {
     deleteTeamConfirm: 'Delete this team?',
     membersCount: (n: number) => `${n} member${n !== 1 ? 's' : ''}`,
 
+    // CSV import
+    singleTab: 'Single Add',
+    csvTab: 'CSV Bulk Add',
+    csvFormatHint: 'Columns: Name, Description, Team, Deadline (YYYY-MM-DD), Reviewer Team 1, Check Content 1, Reviewer Team 2, Check Content 2, ... (reviewers optional)',
+    csvPastePlaceholder: 'Name,Description,Team,Deadline,Reviewer1,CheckContent1\nDesign Review,Review designs,Design Team,2025-03-01,Dev Team,"・Check spec\n・Verify behavior"\n...',
+    csvAvailableTeams: 'Available teams:',
+    csvParseBtnLabel: 'Preview',
+    csvNoValidRows: 'No valid rows',
+    csvImportBtnLabel: (n: number) => `Import ${n} stage${n !== 1 ? 's' : ''}`,
+    csvImportingLabel: 'Importing...',
+    csvDownloadSample: 'Download Sample CSV',
+    xlsxDownloadSample: 'Download Sample Excel',
+    fileUploadLabel: 'Select File (CSV / Excel)',
+    fileUploadHint: 'or paste CSV text below',
+
+    // Bulk check content editor
+    bulkEditBtn: 'Bulk Edit Check Content',
+    bulkEditSelectTeam: 'Select reviewer team',
+    bulkEditApplyAllLabel: 'Apply same content to all stages:',
+    bulkEditApplyAllBtn: 'Apply to all',
+    bulkEditNoPending: 'No pending stages for this reviewer team',
+    bulkEditSaveBtn: (n: number) => `Save ${n} stage${n !== 1 ? 's' : ''}`,
+    bulkEditSaving: 'Saving...',
+    bulkEditDone: (n: number) => `Updated ${n} stage${n !== 1 ? 's' : ''}`,
+
     statusPending: 'Pending',
     statusInProgress: 'In Progress',
     statusCompleted: 'Completed',
@@ -352,6 +402,31 @@ const t = {
     noTeamsHint: '请使用上方表单添加团队',
     deleteTeamConfirm: '确定删除此团队？',
     membersCount: (n: number) => `${n}名`,
+
+    // CSV import
+    singleTab: '单个添加',
+    csvTab: 'CSV批量添加',
+    csvFormatHint: '列顺序: 名称, 描述, 团队名, 截止日期 (YYYY-MM-DD), 确认团队1, 确认内容1, 确认团队2, 确认内容2, ... (确认团队可省略)',
+    csvPastePlaceholder: '名称,描述,团队名,截止日期,确认团队1,确认内容1\n设计评审,确认设计,设计团队,2025-03-01,开发团队,"・确认规格\n・验证动作"\n...',
+    csvAvailableTeams: '可用团队:',
+    csvParseBtnLabel: '预览',
+    csvNoValidRows: '没有有效行',
+    csvImportBtnLabel: (n: number) => `导入${n}个阶段`,
+    csvImportingLabel: '导入中...',
+    csvDownloadSample: '下载示例CSV',
+    xlsxDownloadSample: '下载示例Excel',
+    fileUploadLabel: '选择文件 (CSV / Excel)',
+    fileUploadHint: '或在下方粘贴CSV文本',
+
+    // Bulk check content editor
+    bulkEditBtn: '批量编辑确认内容',
+    bulkEditSelectTeam: '选择确认团队',
+    bulkEditApplyAllLabel: '对所有阶段应用相同内容:',
+    bulkEditApplyAllBtn: '应用到所有',
+    bulkEditNoPending: '该确认团队没有待处理阶段',
+    bulkEditSaveBtn: (n: number) => `批量保存${n}个阶段`,
+    bulkEditSaving: '保存中...',
+    bulkEditDone: (n: number) => `已更新${n}个阶段`,
 
     statusPending: '待处理',
     statusInProgress: '进行中',

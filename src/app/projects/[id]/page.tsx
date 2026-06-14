@@ -5,6 +5,7 @@ import Link from 'next/link'
 import type { Project, Team, Stage } from '@/lib/types'
 import StageTimeline from '@/components/StageTimeline'
 import AddStageForm from '@/components/AddStageForm'
+import BulkCheckContentEditor from '@/components/BulkCheckContentEditor'
 import { useDarkMode } from '@/components/DarkModeProvider'
 import { useLanguage } from '@/components/LanguageProvider'
 import { LOCALES, type Locale } from '@/lib/i18n'
@@ -159,7 +160,7 @@ function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
             <textarea
               autoFocus
               rows={2}
-              className="w-full text-sm text-gray-700 border border-blue-300 rounded-lg px-3 py-2 mb-4 outline-none resize-none focus:ring-2 focus:ring-blue-300"
+              className="w-full text-sm text-gray-700 border border-blue-300 rounded-lg px-3 py-2 mb-4 outline-none focus:ring-2 focus:ring-blue-300"
               value={editDesc}
               onChange={(e) => setEditDesc(e.target.value)}
               onBlur={() => {
@@ -175,7 +176,7 @@ function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
             />
           ) : (
             <p
-              className="text-gray-500 text-sm mb-4 cursor-pointer hover:text-gray-700 transition-colors min-h-[1.25rem]"
+              className="text-gray-500 text-sm mb-4 cursor-pointer hover:text-gray-700 transition-colors min-h-[1.25rem] whitespace-pre-wrap"
               onClick={() => { setEditDesc(project.description ?? ''); setEditingDesc(true) }}
               title={t.edit}
             >
@@ -230,7 +231,15 @@ function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
 
         {/* Timeline */}
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 sm:p-6">
-          <h2 className="font-semibold text-gray-900 mb-4 sm:mb-6">{t.stageTimeline}</h2>
+          <div className="flex items-center justify-between mb-4 sm:mb-6">
+            <h2 className="font-semibold text-gray-900">{t.stageTimeline}</h2>
+            <BulkCheckContentEditor
+              projectId={project.id}
+              stages={project.stages}
+              teams={teams}
+              onSaved={load}
+            />
+          </div>
           {teams.length === 0 ? (
             <div className="text-center py-10 text-gray-400">
               <p>{t.noTeamsMessage}</p>
