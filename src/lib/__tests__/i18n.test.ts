@@ -55,4 +55,25 @@ describe('i18n', () => {
     it('en plural', () => expect(translations.en.membersCount(2)).toBe('2 members'))
     it('zh', () => expect(translations.zh.membersCount(5)).toBe('5名'))
   })
+
+  describe('csvImportBtnLabel', () => {
+    it('ja', () => expect(translations.ja.csvImportBtnLabel(5)).toBe('5件をインポート'))
+    it('en singular', () => expect(translations.en.csvImportBtnLabel(1)).toBe('Import 1 stage'))
+    it('en plural', () => expect(translations.en.csvImportBtnLabel(3)).toBe('Import 3 stages'))
+    it('zh', () => expect(translations.zh.csvImportBtnLabel(2)).toBe('导入2个阶段'))
+  })
+
+  describe('bulkEditSaveBtn', () => {
+    it('ja', () => expect(translations.ja.bulkEditSaveBtn(4)).toBe('4件を一括保存'))
+    it('en singular', () => expect(translations.en.bulkEditSaveBtn(1)).toBe('Save 1 stage'))
+    it('en plural', () => expect(translations.en.bulkEditSaveBtn(3)).toBe('Save 3 stages'))
+    it('zh', () => expect(translations.zh.bulkEditSaveBtn(2)).toBe('批量保存2个阶段'))
+  })
+
+  describe('bulkEditDone', () => {
+    it('ja', () => expect(translations.ja.bulkEditDone(3)).toBe('3件を更新しました'))
+    it('en singular', () => expect(translations.en.bulkEditDone(1)).toBe('Updated 1 stage'))
+    it('en plural', () => expect(translations.en.bulkEditDone(5)).toBe('Updated 5 stages'))
+    it('zh', () => expect(translations.zh.bulkEditDone(2)).toBe('已更新2个阶段'))
+  })
 })

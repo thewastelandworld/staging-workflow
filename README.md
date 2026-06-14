@@ -1,36 +1,193 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🚦 Staging Workflow
 
-## Getting Started
+ステージ型の承認ワークフローを管理するWebアプリケーションです。案件（ケース）ごとにステージを順番に進め、チームへのメール通知・確認チームの承認・問題点管理を一元化できます。
 
-First, run the development server:
+## 主な機能
+
+### ケース管理
+- ケース（プロジェクト）の作成・削除
+- ケースごとの名前・説明の編集（クリックでインライン編集）
+- 一覧画面でのステータス・進捗・問題点の確認
+
+### ステージタイムライン
+- ステージの追加・編集・削除・並び替え（順番指定）
+- ステータス管理: 待機中 / 進行中 / 完了 / 期限超過
+- 説明・問題点の多行テキスト入力・表示
+- ステージ完了時に次のステージへ自動でメール通知
+
+### CSV / Excel 一括インポート
+- CSV または Excel（.xlsx）ファイルでステージを一括登録
+- 列順: `ステージ名, 説明, チーム名, 締め切り, 確認チーム1, 確認内容1, 確認チーム2, 確認内容2, ...`
+- 締め切り形式: `YYYY-MM-DD` または `YYYY-MM-DDTHH:mm`
+- 確認内容はセル内改行（複数行）に対応
+- サンプルCSV・サンプルExcelをその場でダウンロード可能
+- インポート前にプレビューで内容を確認、有効行のみ登録
+
+### 確認チーム（レビュー承認）
+- ステージに複数の確認チームを順番に設定
+- 前のチームが承認後、次のチームへ自動でメール通知
+- 確認コメントの入力・保存
+- 待機中ステージの確認内容を一括編集（変更ありのみ保存）
+
+### 問題点管理
+- 進行中ステージへの問題点の記録・編集・解決
+- ケース一覧画面にステージ名付きで問題内容を表示
+
+### チーム管理
+- チームの作成・削除・色設定
+- メンバー（名前・メールアドレス・役割）の追加・削除
+
+### その他
+- 3言語対応（日本語 / English / 中文）
+- ダークモード
+- レスポンシブデザイン（PC・スマートフォン）
+
+## 技術スタック
+
+| カテゴリ | 技術 |
+|---|---|
+| フレームワーク | Next.js 16（App Router） |
+| データベース | Supabase（PostgreSQL + JSONB） |
+| スタイリング | Tailwind CSS |
+| メール送信 | Nodemailer（SMTP / Ethereal自動テストアカウント） |
+| Excel処理 | SheetJS（xlsx） |
+| テスト | Vitest |
+| デプロイ | Vercel（東京リージョン） |
+
+## セットアップ
+
+### 前提条件
+
+- Node.js 18以上
+- [Supabase](https://supabase.com) アカウント
+
+### 1. リポジトリのクローン・依存関係のインストール
+
+```bash
+git clone <repository-url>
+cd staging-workflow
+npm install
+```
+
+### 2. Supabase のセットアップ
+
+Supabase のダッシュボードで新しいプロジェクトを作成し、SQL エディタで `supabase/schema.sql` を実行してください。
+
+```sql
+-- supabase/schema.sql を貼り付けて実行
+```
+
+### 3. 環境変数の設定
+
+`.env.local` を作成し、以下を設定します。
+
+```env
+# Supabase（必須）
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+
+# SMTP メール設定（省略するとEthereal自動テストアカウントを使用）
+# SMTP_HOST=smtp.gmail.com
+# SMTP_PORT=587
+# SMTP_SECURE=false
+# SMTP_USER=your@gmail.com
+# SMTP_PASS=your-app-password
+# SMTP_FROM="Staging Workflow <noreply@example.com>"
+```
+
+> SMTP を設定しない場合、[Ethereal](https://ethereal.email/) の自動テストアカウントでメール送受信が行われます。送信後に表示されるプレビューURLで内容を確認できます。
+
+### 4. 開発サーバーの起動
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+[http://localhost:3000](http://localhost:3000) でアプリが起動します。
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 使い方
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### チームを登録する
 
-## Learn More
+1. ヘッダーの「チーム管理」をクリック
+2. チーム名・カラーを入力して作成
+3. チームにメンバー（名前・メールアドレス・役割）を追加
 
-To learn more about Next.js, take a look at the following resources:
+### ケースを作成する
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. ダッシュボードの「+ 新規ケース」をクリック
+2. ケース名・説明を入力して作成
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### ステージを追加する
 
-## Deploy on Vercel
+#### 単体追加
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+ケース詳細画面の「+ ステージを追加」から1件ずつ入力します。既存ステージからコピーも可能です。
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+#### CSV / Excel で一括追加
+
+1. 「+ ステージを追加」→「CSV一括追加」タブを選択
+2. 「↓ サンプルCSV」または「↓ サンプルExcel」をダウンロードして書式を確認
+3. ファイルを編集後、「ファイルを選択」でアップロード（またはCSVをテキストで貼り付け）
+4. 「プレビュー」で内容を確認し、「インポート」を実行
+
+**CSV列の順序:**
+
+```
+ステージ名, 説明, チーム名, 締め切り, 確認チーム1, 確認内容1, 確認チーム2, 確認内容2, ...
+```
+
+確認内容に改行を含める場合は、セルをダブルクォートで囲みます（例: `"・確認1\n・確認2"`）。
+
+### 確認内容を一括編集する
+
+待機中ステージの確認チームの確認内容をまとめて変更したい場合:
+
+1. ケース詳細画面の「✏️ 確認内容を一括編集」をクリック
+2. 確認チームを選択
+3. 全ステージに同じ内容を適用するか、ステージごとに個別編集
+4. 変更ありのステージのみ保存される
+
+### メール通知のフロー
+
+```
+ステージ開始 → 担当チームにメール送信
+     ↓
+確認チームが順番に確認 → 次の確認チームにメール送信
+     ↓
+全員確認完了 → ステージ完了 → 次のステージへメール送信
+```
+
+## テスト
+
+```bash
+# テスト実行
+npm test
+
+# カバレッジ計測
+npm run test:coverage
+
+# ウォッチモード
+npm run test:watch
+```
+
+テスト対象:
+- CSVパース処理（`src/lib/csv-utils.ts`）
+- 多言語文字列（`src/lib/i18n.ts`）
+- プロジェクトステータス計算（`src/lib/project-utils.ts`）
+- DBマッパー（`src/lib/mappers.ts`）
+- メール送信（`src/lib/email.ts`）
+- APIルート（`/api/projects`, `/api/teams`, `/api/projects/[id]/stages` など）
+
+## デプロイ（Vercel）
+
+```bash
+# Vercel CLI でデプロイ
+vercel deploy --prod
+```
+
+Vercel の環境変数に `NEXT_PUBLIC_SUPABASE_URL` と `SUPABASE_SERVICE_ROLE_KEY`（および必要に応じてSMTP設定）を追加してください。
+
+## ライセンス
+
+MIT
