@@ -52,11 +52,15 @@ export async function notifyProblem(
   const appUrl = process.env.NEXT_PUBLIC_APP_URL
   const projectLink = appUrl ? `<${appUrl}/projects/${projectId}|${projectName}>` : `*${projectName}*`
 
-  await fetch(webhookUrl, {
+  const res = await fetch(webhookUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       text: `🚨 *問題が報告されました*\n*プロジェクト:* ${projectLink}\n*ステージ:* ${stageName}\n*内容:* ${problem}`,
     }),
   })
+  if (!res.ok) {
+    const body = await res.text().catch(() => '')
+    throw new Error(`Slack webhook returned ${res.status}: ${body}`)
+  }
 }
