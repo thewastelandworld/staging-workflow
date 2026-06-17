@@ -23,7 +23,8 @@ function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const { isDark, toggle: toggleDark } = useDarkMode()
   const { t, locale, setLocale } = useLanguage()
-  const { session, logout } = useSession()
+  const { session, loading: sessionLoading, logout } = useSession()
+  const isReadOnly = !sessionLoading && session?.role === 'readonly'
   const [project, setProject] = useState<Project | null>(null)
   const [teams, setTeams] = useState<Team[]>([])
   const [loading, setLoading] = useState(true)
@@ -127,9 +128,9 @@ function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
               />
             ) : (
               <h1
-                className="text-sm sm:text-lg font-bold text-gray-900 truncate cursor-pointer hover:text-blue-600 transition-colors"
-                onClick={() => { setEditName(project.name); setEditingName(true) }}
-                title={t.edit}
+                className={`text-sm sm:text-lg font-bold text-gray-900 truncate ${!isReadOnly ? 'cursor-pointer hover:text-blue-600 transition-colors' : ''}`}
+                onClick={() => { if (!isReadOnly) { setEditName(project.name); setEditingName(true) } }}
+                title={!isReadOnly ? t.edit : undefined}
               >
                 {project.name}
               </h1>
@@ -187,9 +188,9 @@ function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
             />
           ) : (
             <p
-              className="text-gray-500 text-sm mb-4 cursor-pointer hover:text-gray-700 transition-colors min-h-[1.25rem] whitespace-pre-wrap"
-              onClick={() => { setEditDesc(project.description ?? ''); setEditingDesc(true) }}
-              title={t.edit}
+              className={`text-gray-500 text-sm mb-4 min-h-[1.25rem] whitespace-pre-wrap ${!isReadOnly ? 'cursor-pointer hover:text-gray-700 transition-colors' : ''}`}
+              onClick={() => { if (!isReadOnly) { setEditDesc(project.description ?? ''); setEditingDesc(true) } }}
+              title={!isReadOnly ? t.edit : undefined}
             >
               {project.description || <span className="text-gray-300 italic">{t.descriptionPlaceholder}</span>}
             </p>
@@ -244,12 +245,14 @@ function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 sm:p-6">
           <div className="flex items-center justify-between mb-4 sm:mb-6">
             <h2 className="font-semibold text-gray-900">{t.stageTimeline}</h2>
-            <BulkCheckContentEditor
-              projectId={project.id}
-              stages={project.stages}
-              teams={teams}
-              onSaved={load}
-            />
+            {!isReadOnly && (
+              <BulkCheckContentEditor
+                projectId={project.id}
+                stages={project.stages}
+                teams={teams}
+                onSaved={load}
+              />
+            )}
           </div>
           {teams.length === 0 ? (
             <div className="text-center py-10 text-gray-400">
@@ -265,14 +268,17 @@ function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
                 teams={teams}
                 onStageUpdate={handleStageUpdate}
                 onStageDelete={handleStageDelete}
+                isReadOnly={isReadOnly}
               />
-              <AddStageForm
-                projectId={project.id}
-                teams={teams}
-                nextOrder={nextOrder}
-                existingStages={project.stages}
-                onAdded={load}
-              />
+              {!isReadOnly && (
+                <AddStageForm
+                  projectId={project.id}
+                  teams={teams}
+                  nextOrder={nextOrder}
+                  existingStages={project.stages}
+                  onAdded={load}
+                />
+              )}
             </>
           )}
         </div>

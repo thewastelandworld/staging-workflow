@@ -10,6 +10,7 @@ interface Props {
   teams: Team[]
   onStageUpdate: (stageId: string, data: Partial<Stage>) => Promise<void>
   onStageDelete: (stageId: string) => Promise<void>
+  isReadOnly?: boolean
 }
 
 interface EditForm {
@@ -50,7 +51,7 @@ function toDatetimeLocal(iso: string) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
-export default function StageTimeline({ project, teams, onStageUpdate, onStageDelete }: Props) {
+export default function StageTimeline({ project, teams, onStageUpdate, onStageDelete, isReadOnly = false }: Props) {
   const { t } = useLanguage()
   const [loadingId, setLoadingId] = useState<string | null>(null)
   const [checkingKey, setCheckingKey] = useState<string | null>(null)
@@ -330,7 +331,7 @@ export default function StageTimeline({ project, teams, onStageUpdate, onStageDe
                         <div className="flex items-center gap-2 flex-wrap">
                           <h3 className="font-semibold text-gray-900">{stage.name}</h3>
                           <StageStatusBadge status={status} />
-                          {status !== 'completed' && !stage.problem && problemEditId !== stage.id && (
+                          {!isReadOnly && status !== 'completed' && !stage.problem && problemEditId !== stage.id && (
                             <button
                               onClick={() => openProblemEdit(stage)}
                               className="text-xs px-2 py-0.5 bg-red-50 text-red-600 border border-red-300 rounded-full hover:bg-red-100 transition-colors"
@@ -344,16 +345,18 @@ export default function StageTimeline({ project, teams, onStageUpdate, onStageDe
                             </span>
                           )}
                         </div>
-                        <div className="flex items-center gap-2">
-                          <button onClick={() => startEdit(stage)}
-                            className="text-xs px-2 py-1 text-gray-500 hover:text-blue-600 hover:bg-blue-50 border border-gray-200 hover:border-blue-300 rounded-lg transition-colors">
-                            {t.edit}
-                          </button>
-                          <button onClick={() => onStageDelete(stage.id)}
-                            className="text-gray-300 hover:text-red-400 text-sm transition-colors">
-                            ✕
-                          </button>
-                        </div>
+                        {!isReadOnly && (
+                          <div className="flex items-center gap-2">
+                            <button onClick={() => startEdit(stage)}
+                              className="text-xs px-2 py-1 text-gray-500 hover:text-blue-600 hover:bg-blue-50 border border-gray-200 hover:border-blue-300 rounded-lg transition-colors">
+                              {t.edit}
+                            </button>
+                            <button onClick={() => onStageDelete(stage.id)}
+                              className="text-gray-300 hover:text-red-400 text-sm transition-colors">
+                              ✕
+                            </button>
+                          </div>
+                        )}
                       </div>
 
                       {stage.description && (
@@ -368,7 +371,7 @@ export default function StageTimeline({ project, teams, onStageUpdate, onStageDe
                               <span className="text-xs font-semibold text-red-700">{t.problemLabel}</span>
                               <p className="text-sm text-red-800 mt-0.5 whitespace-pre-wrap">{stage.problem}</p>
                             </div>
-                            {status !== 'completed' && (
+                            {!isReadOnly && status !== 'completed' && (
                               <div className="flex flex-col gap-1 flex-shrink-0">
                                 <button
                                   onClick={() => openProblemEdit(stage)}
@@ -389,7 +392,7 @@ export default function StageTimeline({ project, teams, onStageUpdate, onStageDe
                       )}
 
                       {/* Problem edit form */}
-                      {problemEditId === stage.id && (
+                      {!isReadOnly && problemEditId === stage.id && (
                         <div className="mt-2 p-3 bg-red-50 border border-red-300 rounded-lg space-y-2">
                           <span className="text-xs font-semibold text-red-700">{t.problemLabel}</span>
                           <textarea
@@ -488,7 +491,7 @@ export default function StageTimeline({ project, teams, onStageUpdate, onStageDe
                                       <span className="font-medium text-green-700">{t.reviewNoteLabel}: </span>{reviewer.note}
                                     </div>
                                   )}
-                                  {isActiveReviewer && (status === 'in_progress' || status === 'overdue') && (
+                                  {!isReadOnly && isActiveReviewer && (status === 'in_progress' || status === 'overdue') && (
                                     <div className="ml-6 space-y-1.5">
                                       {reviewer.checkContent && (
                                         <div className="px-2 py-1.5 bg-blue-50 border border-blue-100 rounded text-xs text-blue-800 whitespace-pre-wrap">
@@ -517,31 +520,33 @@ export default function StageTimeline({ project, teams, onStageUpdate, onStageDe
                         </div>
                       )}
 
-                      <div className="mt-3 flex gap-2 flex-wrap">
-                        {status === 'pending' && (
-                          <button onClick={() => handleStart(stage)} disabled={isActive}
-                            className="text-sm px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors">
-                            {isActive ? '...' : t.start}
-                          </button>
-                        )}
-                        {(status === 'in_progress' || status === 'overdue') && (() => {
-                          const allReviewersDone = !stage.reviewers || stage.reviewers.length === 0 || stage.reviewers.every((r) => r.checkedAt)
-                          return allReviewersDone ? (
-                            <button onClick={() => handleComplete(stage)} disabled={isActive}
-                              className="text-sm px-3 py-1 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors">
-                              {isActive ? t.completing : t.complete}
+                      {!isReadOnly && (
+                        <div className="mt-3 flex gap-2 flex-wrap">
+                          {status === 'pending' && (
+                            <button onClick={() => handleStart(stage)} disabled={isActive}
+                              className="text-sm px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors">
+                              {isActive ? '...' : t.start}
                             </button>
-                          ) : (
-                            <span className="text-xs text-gray-400 py-1">{t.waitingApproval}</span>
-                          )
-                        })()}
-                        {status === 'completed' && (
-                          <button onClick={() => handleRestart(stage)} disabled={isActive}
-                            className="text-sm px-3 py-1 bg-orange-500 text-white rounded-lg hover:bg-orange-600 disabled:opacity-50 transition-colors">
-                            {isActive ? '...' : t.restart}
-                          </button>
-                        )}
-                      </div>
+                          )}
+                          {(status === 'in_progress' || status === 'overdue') && (() => {
+                            const allReviewersDone = !stage.reviewers || stage.reviewers.length === 0 || stage.reviewers.every((r) => r.checkedAt)
+                            return allReviewersDone ? (
+                              <button onClick={() => handleComplete(stage)} disabled={isActive}
+                                className="text-sm px-3 py-1 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors">
+                                {isActive ? t.completing : t.complete}
+                              </button>
+                            ) : (
+                              <span className="text-xs text-gray-400 py-1">{t.waitingApproval}</span>
+                            )
+                          })()}
+                          {status === 'completed' && (
+                            <button onClick={() => handleRestart(stage)} disabled={isActive}
+                              className="text-sm px-3 py-1 bg-orange-500 text-white rounded-lg hover:bg-orange-600 disabled:opacity-50 transition-colors">
+                              {isActive ? '...' : t.restart}
+                            </button>
+                          )}
+                        </div>
+                      )}
 
                       {status === 'overdue' && (
                         <div className="mt-2 text-xs text-red-600 font-medium flex items-center gap-1">

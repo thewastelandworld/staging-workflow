@@ -16,7 +16,8 @@ const COLORS = [
 export default function TeamsPage() {
   const { isDark, toggle: toggleDark } = useDarkMode()
   const { t, locale, setLocale } = useLanguage()
-  const { session, logout } = useSession()
+  const { session, loading: sessionLoading, logout } = useSession()
+  const isReadOnly = !sessionLoading && session?.role === 'readonly'
   const [teams, setTeams] = useState<Team[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -126,7 +127,7 @@ export default function TeamsPage() {
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         {/* Add team form */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 mb-6">
+        {!isReadOnly && <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 mb-6">
           <h2 className="font-semibold text-gray-900 mb-4">{t.addNewTeam}</h2>
           <form onSubmit={createTeam}>
             <div className="flex flex-wrap gap-3 items-end">
@@ -165,7 +166,7 @@ export default function TeamsPage() {
               </button>
             </div>
           </form>
-        </div>
+        </div>}
 
         {/* Team list */}
         {teams.length === 0 ? (
@@ -192,12 +193,14 @@ export default function TeamsPage() {
                       <span className="font-semibold text-gray-900">{team.name}</span>
                       <span className="ml-2 text-sm text-gray-400">{t.membersCount(team.members.length)}</span>
                     </div>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); deleteTeam(team.id) }}
-                      className="text-gray-300 hover:text-red-400 text-sm transition-colors mr-2"
-                    >
-                      {t.delete}
-                    </button>
+                    {!isReadOnly && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); deleteTeam(team.id) }}
+                        className="text-gray-300 hover:text-red-400 text-sm transition-colors mr-2"
+                      >
+                        {t.delete}
+                      </button>
+                    )}
                     <span className="text-gray-400 text-sm">{isExpanded ? '▲' : '▼'}</span>
                   </div>
 
@@ -217,12 +220,14 @@ export default function TeamsPage() {
                                   {m.role && <span className="ml-2 text-xs text-gray-400 bg-white border border-gray-200 px-1.5 py-0.5 rounded">{m.role}</span>}
                                   <div className="text-xs text-gray-400 mt-0.5">{m.email}</div>
                                 </div>
-                                <button
-                                  onClick={() => removeMember(team.id, m.id)}
-                                  className="text-gray-300 hover:text-red-400 text-sm transition-colors"
-                                >
-                                  ✕
-                                </button>
+                                {!isReadOnly && (
+                                  <button
+                                    onClick={() => removeMember(team.id, m.id)}
+                                    className="text-gray-300 hover:text-red-400 text-sm transition-colors"
+                                  >
+                                    ✕
+                                  </button>
+                                )}
                               </div>
                             ))}
                           </div>
@@ -230,7 +235,7 @@ export default function TeamsPage() {
                       </div>
 
                       {/* Add member form */}
-                      <div className="border-t border-gray-100 pt-4">
+                      {!isReadOnly && <div className="border-t border-gray-100 pt-4">
                         <h3 className="text-sm font-medium text-gray-700 mb-2">{t.addMemberLabel}</h3>
                         <div className="flex flex-wrap gap-2">
                           <input
@@ -265,7 +270,7 @@ export default function TeamsPage() {
                             {t.add}
                           </button>
                         </div>
-                      </div>
+                      </div>}
                     </div>
                   )}
                 </div>
