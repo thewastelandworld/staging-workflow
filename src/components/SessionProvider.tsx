@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, useCallback } from 'react'
 
-type Role = 'admin' | 'readonly'
+type Role = 'admin' | 'user' | 'readonly'
 interface SessionState { user: string; role: Role }
 
 const SessionContext = createContext<{

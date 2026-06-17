@@ -1,6 +1,6 @@
 import 'server-only'
 
-export type Role = 'admin' | 'readonly'
+export type Role = 'admin' | 'user' | 'readonly'
 export interface Session { user: string; role: Role; exp: number }
 
 function secret() {

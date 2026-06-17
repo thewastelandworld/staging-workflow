@@ -86,6 +86,9 @@ export default function DashboardPage() {
           <nav className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
             <Link href="/" className="hidden sm:block text-sm font-medium text-blue-600">{t.dashboard}</Link>
             <Link href="/teams" className="text-xs sm:text-sm text-gray-500 hover:text-gray-900 transition-colors">{t.teamManagement}</Link>
+            {!sessionLoading && session?.role === 'admin' && (
+              <Link href="/admin/users" className="text-xs sm:text-sm text-gray-500 hover:text-gray-900 transition-colors">ユーザー管理</Link>
+            )}
             <div className="flex items-center gap-0.5 sm:gap-1 text-xs">
               {LOCALES.map((l) => (
                 <button key={l.value} onClick={() => setLocale(l.value as Locale)}

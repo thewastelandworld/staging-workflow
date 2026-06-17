@@ -23,6 +23,22 @@ CREATE TABLE IF NOT EXISTS projects (
   stages      JSONB       NOT NULL DEFAULT '[]'::jsonb
 );
 
+-- Users table (for login authentication)
+-- role: 'admin' = 管理員, 'user' = 使用者, 'readonly' = 読み取り専用
+CREATE TABLE IF NOT EXISTS users (
+  id            UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  username      TEXT        NOT NULL UNIQUE,
+  password_hash TEXT        NOT NULL,
+  role          TEXT        NOT NULL DEFAULT 'readonly' CHECK (role IN ('admin', 'user', 'readonly')),
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Migration: if the users table already exists with the old constraint (admin, readonly only),
+-- run the following to add 'user' as a valid role:
+--
+--   ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
+--   ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('admin', 'user', 'readonly'));
+
 -- Disable RLS (enable and add policies if you need auth later)
 ALTER TABLE teams   DISABLE ROW LEVEL SECURITY;
 ALTER TABLE projects DISABLE ROW LEVEL SECURITY;

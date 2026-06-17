@@ -1,0 +1,195 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import Link from 'next/link'
+import { useSession } from '@/components/SessionProvider'
+import { useRouter } from 'next/navigation'
+
+interface User {
+  id: string
+  username: string
+  role: 'admin' | 'user' | 'readonly'
+}
+
+const ROLE_LABEL: Record<string, string> = {
+  admin: '管理員',
+  user: '使用者',
+  readonly: '読み取り専用',
+}
+
+const ROLE_STYLE: Record<string, string> = {
+  admin: 'bg-blue-100 text-blue-700',
+  user: 'bg-green-100 text-green-700',
+  readonly: 'bg-yellow-100 text-yellow-700',
+}
+
+export default function AdminUsersPage() {
+  const { session, loading: sessionLoading } = useSession()
+  const router = useRouter()
+  const [users, setUsers] = useState<User[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [busy, setBusy] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!sessionLoading && session?.role !== 'admin') {
+      router.replace('/')
+    }
+  }, [session, sessionLoading, router])
+
+  async function load() {
+    setLoading(true)
+    const res = await fetch('/api/admin/users')
+    if (res.ok) {
+      setUsers(await res.json())
+    } else {
+      setError('ユーザー一覧の取得に失敗しました')
+    }
+    setLoading(false)
+  }
+
+  useEffect(() => {
+    if (!sessionLoading && session?.role === 'admin') {
+      load()
+    }
+  }, [session, sessionLoading])
+
+  async function changeRole(user: User, newRole: 'user' | 'readonly') {
+    if (newRole === user.role) return
+    setBusy(user.id)
+    const res = await fetch(`/api/admin/users/${user.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role: newRole }),
+    })
+    if (!res.ok) {
+      const data = await res.json()
+      alert(data.error ?? '権限変更に失敗しました')
+    } else {
+      setUsers(prev => prev.map(u => u.id === user.id ? { ...u, role: newRole } : u))
+    }
+    setBusy(null)
+  }
+
+  async function deleteUser(user: User) {
+    if (!confirm(`「${user.username}」を削除しますか？`)) return
+    setBusy(user.id)
+    const res = await fetch(`/api/admin/users/${user.id}`, { method: 'DELETE' })
+    if (!res.ok) {
+      const data = await res.json()
+      alert(data.error ?? '削除に失敗しました')
+      setBusy(null)
+    } else {
+      setUsers(prev => prev.filter(u => u.id !== user.id))
+      setBusy(null)
+    }
+  }
+
+  if (sessionLoading || loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-gray-400 animate-pulse">読み込み中...</div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Link href="/" className="flex items-center gap-2 text-gray-500 hover:text-gray-900 transition-colors">
+              <span className="text-xl">🚦</span>
+              <span className="text-sm">Staging Workflow</span>
+            </Link>
+            <span className="text-gray-300">/</span>
+            <span className="text-sm font-semibold text-gray-900">ユーザー管理</span>
+          </div>
+          <Link href="/" className="text-sm text-gray-400 hover:text-gray-700 transition-colors">← ダッシュボード</Link>
+        </div>
+      </header>
+
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-lg font-semibold text-gray-900">ユーザー一覧</h1>
+          <span className="text-sm text-gray-400">{users.length} 名</span>
+        </div>
+
+        {error && (
+          <div className="mb-4 px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">{error}</div>
+        )}
+
+        <div className="mb-4 px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-500">
+          権限変更は <span className="font-medium text-green-700">使用者</span> と <span className="font-medium text-yellow-700">読み取り専用</span> のみ変更できます。<span className="font-medium text-blue-700">管理員</span> への変更はできません。
+        </div>
+
+        {users.length === 0 ? (
+          <div className="text-center py-16 text-gray-400">
+            <div className="text-4xl mb-3">👤</div>
+            <p className="text-sm">登録済みユーザーがいません</p>
+          </div>
+        ) : (
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-gray-50 border-b border-gray-200 text-xs text-gray-500 uppercase tracking-wide">
+                  <th className="text-left px-5 py-3 font-medium">ユーザー名</th>
+                  <th className="text-left px-5 py-3 font-medium">権限</th>
+                  <th className="px-5 py-3" />
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {users.map(user => {
+                  const isSelf = user.username === session?.user
+                  const isAdmin = user.role === 'admin'
+                  const isBusy = busy === user.id
+                  const canEdit = !isSelf && !isAdmin
+
+                  return (
+                    <tr key={user.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-5 py-4 font-medium text-gray-900">
+                        {user.username}
+                        {isSelf && (
+                          <span className="ml-2 text-xs text-blue-500 font-normal">（自分）</span>
+                        )}
+                      </td>
+                      <td className="px-5 py-4">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${ROLE_STYLE[user.role]}`}>
+                          {ROLE_LABEL[user.role]}
+                        </span>
+                      </td>
+                      <td className="px-5 py-4">
+                        <div className="flex items-center justify-end gap-2">
+                          {canEdit ? (
+                            <select
+                              value={user.role}
+                              disabled={isBusy}
+                              onChange={e => changeRole(user, e.target.value as 'user' | 'readonly')}
+                              className="text-xs px-2 py-1.5 border border-gray-300 rounded-lg text-gray-600 bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-blue-400"
+                            >
+                              <option value="user">使用者</option>
+                              <option value="readonly">読み取り専用</option>
+                            </select>
+                          ) : (
+                            <span className="text-xs text-gray-300 px-3 py-1.5">変更不可</span>
+                          )}
+                          <button
+                            onClick={() => deleteUser(user)}
+                            disabled={isSelf || isBusy}
+                            className="text-xs px-3 py-1.5 border border-red-200 rounded-lg text-red-500 hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                          >
+                            削除
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </main>
+    </div>
+  )
+}

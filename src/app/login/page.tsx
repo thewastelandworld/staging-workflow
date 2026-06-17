@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { Suspense } from 'react'
 
@@ -81,6 +82,13 @@ function LoginForm() {
 
           <p className="text-xs text-center text-gray-400">
             読み取り専用: demo / demo
+          </p>
+
+          <p className="text-xs text-center text-gray-400">
+            アカウントをお持ちでない方は{' '}
+            <Link href="/register" className="text-blue-500 hover:underline">
+              新規登録
+            </Link>
           </p>
         </form>
       </div>

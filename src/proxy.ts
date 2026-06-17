@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { verifySession } from '@/lib/session'
+import { verifySession, signSession } from '@/lib/session'
+
+const SESSION_DURATION_MS = 10 * 60 * 1000
+const SESSION_DURATION_S = 10 * 60
 
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl
 
-  if (pathname.startsWith('/login') || pathname.startsWith('/api/auth/')) {
+  if (pathname.startsWith('/login') || pathname.startsWith('/register') || pathname.startsWith('/api/auth/')) {
     return NextResponse.next()
   }
 
@@ -29,7 +32,16 @@ export async function proxy(req: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  return NextResponse.next()
+  const newToken = await signSession({ ...session, exp: Date.now() + SESSION_DURATION_MS })
+  const response = NextResponse.next()
+  response.cookies.set('session', newToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/',
+    maxAge: SESSION_DURATION_S,
+  })
+  return response
 }
 
 export const config = {
