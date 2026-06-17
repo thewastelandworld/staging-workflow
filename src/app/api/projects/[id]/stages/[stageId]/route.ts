@@ -216,7 +216,9 @@ export async function PATCH(req: Request, { params }: Params) {
 
   if (problemChanged) {
     log.warn('Stage problem reported', { projectId: id, stageName: stage.name, problem: newProblem })
-    notifyProblem(id, row.name, stage.name, newProblem!).catch(() => {})
+    await notifyProblem(id, row.name, stage.name, newProblem!).catch((err) => {
+      log.error('Failed to send Slack notification', { projectId: id, stageId, error: String(err) })
+    })
   }
 
   let emailResult = null

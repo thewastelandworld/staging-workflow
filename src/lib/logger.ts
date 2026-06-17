@@ -58,5 +58,5 @@ export async function notifyProblem(
     body: JSON.stringify({
       text: `🚨 *問題が報告されました*\n*プロジェクト:* ${projectLink}\n*ステージ:* ${stageName}\n*内容:* ${problem}`,
     }),
-  }).catch(() => {})
+  })
 }
