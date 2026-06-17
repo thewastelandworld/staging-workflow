@@ -3,7 +3,7 @@ import { getSupabase } from '@/lib/supabase'
 import { sendStageStartEmail, sendReviewerEmail } from '@/lib/email'
 import type { Stage, StageStatus, Team } from '@/lib/types'
 import { revalidateTag } from 'next/cache'
-import { log } from '@/lib/logger'
+import { log, notifyProblem } from '@/lib/logger'
 import { assertWritable } from '@/lib/auth'
 
 type Params = { params: Promise<{ id: string; stageId: string }> }
@@ -203,11 +203,20 @@ export async function PATCH(req: Request, { params }: Params) {
   if (updatedAny.problem === undefined || updatedAny.problem === '') delete updatedAny.problem
   Object.keys(updatedAny).forEach((k) => updatedAny[k] === undefined && delete updatedAny[k])
 
+  const newProblem = typeof body.problem === 'string' ? body.problem.trim() : undefined
+  const prevProblem = stage.problem ?? ''
+  const problemChanged = newProblem !== undefined && newProblem !== '' && newProblem !== prevProblem
+
   stages[stageIdx] = updated
   const saveErr = await saveStages(id, stages)
   if (saveErr) {
     log.error('Failed to update stage', { projectId: id, stageId, error: saveErr.message })
     return NextResponse.json({ error: saveErr.message }, { status: 500 })
+  }
+
+  if (problemChanged) {
+    log.warn('Stage problem reported', { projectId: id, stageName: stage.name, problem: newProblem })
+    notifyProblem(id, row.name, stage.name, newProblem!).catch(() => {})
   }
 
   let emailResult = null

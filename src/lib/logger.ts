@@ -39,3 +39,24 @@ export const log = {
   warn:  (msg: string, fields?: Fields) => emit('warn',  msg, fields),
   error: (msg: string, fields?: Fields) => emit('error', msg, fields),
 }
+
+export async function notifyProblem(
+  projectId: string,
+  projectName: string,
+  stageName: string,
+  problem: string,
+) {
+  const webhookUrl = process.env.MONITOR_WEBHOOK_URL
+  if (!webhookUrl) return
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL
+  const projectLink = appUrl ? `<${appUrl}/projects/${projectId}|${projectName}>` : `*${projectName}*`
+
+  await fetch(webhookUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      text: `🚨 *問題が報告されました*\n*プロジェクト:* ${projectLink}\n*ステージ:* ${stageName}\n*内容:* ${problem}`,
+    }),
+  }).catch(() => {})
+}
