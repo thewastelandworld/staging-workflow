@@ -12,7 +12,7 @@ import { getProjectStatus } from '@/lib/project-utils'
 export default function DashboardPage() {
   const { isDark, toggle: toggleDark } = useDarkMode()
   const { t, locale, setLocale } = useLanguage()
-  const { session, logout } = useSession()
+  const { session, loading: sessionLoading, logout } = useSession()
   const [projects, setProjects] = useState<Project[]>([])
   const [teams, setTeams] = useState<Team[]>([])
   const [loading, setLoading] = useState(true)
@@ -129,7 +129,7 @@ export default function DashboardPage() {
         {/* Case list header */}
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-base sm:text-lg font-semibold text-gray-900">{t.caseList}</h2>
-          {session?.role !== 'readonly' && (
+          {!sessionLoading && session?.role !== 'readonly' && (
             <button
               onClick={() => setShowForm(!showForm)}
               className="px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition-colors"
@@ -264,7 +264,7 @@ export default function DashboardPage() {
                           {new Date(p.createdAt).toLocaleDateString(dateLocale)}
                         </td>
                         <td className="px-5 py-4 text-right">
-                          {session?.role !== 'readonly' && (
+                          {!sessionLoading && session?.role !== 'readonly' && (
                             <button onClick={() => deleteProject(p.id)}
                               className="text-gray-300 hover:text-red-400 transition-colors text-base">✕</button>
                           )}
@@ -302,7 +302,7 @@ export default function DashboardPage() {
                         className="font-semibold text-gray-900 hover:text-blue-600 transition-colors text-base leading-snug">
                         {p.name}
                       </Link>
-                      {session?.role !== 'readonly' && (
+                      {!sessionLoading && session?.role !== 'readonly' && (
                         <button onClick={() => deleteProject(p.id)}
                           className="text-gray-300 hover:text-red-400 transition-colors text-base flex-shrink-0">✕</button>
                       )}

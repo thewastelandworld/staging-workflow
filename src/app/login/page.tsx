@@ -1,11 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { Suspense } from 'react'
 
 function LoginForm() {
-  const router = useRouter()
   const searchParams = useSearchParams()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -27,7 +26,7 @@ function LoginForm() {
         return
       }
       const next = searchParams.get('next') ?? '/'
-      router.push(next)
+      window.location.href = next
     } catch {
       setError('ログインに失敗しました')
     } finally {
