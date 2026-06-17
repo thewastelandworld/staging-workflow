@@ -11,6 +11,7 @@ vi.mock('next/cache', () => ({
 vi.mock('@/lib/logger', () => ({
   log: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }))
+vi.mock('@/lib/auth', () => ({ assertWritable: vi.fn().mockResolvedValue(null) }))
 
 import { POST } from '../projects/[id]/stages/route'
 

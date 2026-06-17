@@ -4,6 +4,7 @@ import { sendStageStartEmail, sendReviewerEmail } from '@/lib/email'
 import type { Stage, StageStatus, Team } from '@/lib/types'
 import { revalidateTag } from 'next/cache'
 import { log } from '@/lib/logger'
+import { assertWritable } from '@/lib/auth'
 
 type Params = { params: Promise<{ id: string; stageId: string }> }
 
@@ -83,6 +84,8 @@ async function advanceNextStage(
 }
 
 export async function PATCH(req: Request, { params }: Params) {
+  const deny = await assertWritable()
+  if (deny) return deny
   const { id, stageId } = await params
   const body = await req.json()
 
@@ -220,6 +223,8 @@ export async function PATCH(req: Request, { params }: Params) {
 }
 
 export async function DELETE(_req: Request, { params }: Params) {
+  const deny = await assertWritable()
+  if (deny) return deny
   const { id, stageId } = await params
 
   const row = await getProjectRow(id)

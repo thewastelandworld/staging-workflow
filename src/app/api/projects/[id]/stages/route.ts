@@ -4,8 +4,11 @@ import { v4 as uuid } from 'uuid'
 import type { Stage } from '@/lib/types'
 import { revalidateTag } from 'next/cache'
 import { log } from '@/lib/logger'
+import { assertWritable } from '@/lib/auth'
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const deny = await assertWritable()
+  if (deny) return deny
   const { id } = await params
   const body = await req.json()
 

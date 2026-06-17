@@ -3,6 +3,7 @@ import { getSupabase } from '@/lib/supabase'
 import { toProject } from '@/lib/mappers'
 import { cacheLife, cacheTag, revalidateTag } from 'next/cache'
 import { log } from '@/lib/logger'
+import { assertWritable } from '@/lib/auth'
 
 async function fetchProject(id: string) {
   'use cache'
@@ -28,6 +29,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 }
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const deny = await assertWritable()
+  if (deny) return deny
   const { id } = await params
   const body = await req.json()
   const { data, error } = await getSupabase()
@@ -47,6 +50,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 }
 
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const deny = await assertWritable()
+  if (deny) return deny
   const { id } = await params
   const { error } = await getSupabase().from('projects').delete().eq('id', id)
   if (error) {

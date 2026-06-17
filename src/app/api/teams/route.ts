@@ -4,6 +4,7 @@ import { v4 as uuid } from 'uuid'
 import { toTeam } from '@/lib/mappers'
 import { cacheLife, cacheTag, revalidateTag } from 'next/cache'
 import { log } from '@/lib/logger'
+import { assertWritable } from '@/lib/auth'
 
 async function fetchTeams() {
   'use cache'
@@ -27,6 +28,8 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
+  const deny = await assertWritable()
+  if (deny) return deny
   const body = await req.json()
   const { data: existing } = await getSupabase().from('teams').select('id')
   const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16']

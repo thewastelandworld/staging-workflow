@@ -8,6 +8,7 @@ import AddStageForm from '@/components/AddStageForm'
 import BulkCheckContentEditor from '@/components/BulkCheckContentEditor'
 import { useDarkMode } from '@/components/DarkModeProvider'
 import { useLanguage } from '@/components/LanguageProvider'
+import { useSession } from '@/components/SessionProvider'
 import { LOCALES, type Locale } from '@/lib/i18n'
 
 export default function ProjectPageWrapper({ params }: { params: Promise<{ id: string }> }) {
@@ -22,6 +23,7 @@ function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const { isDark, toggle: toggleDark } = useDarkMode()
   const { t, locale, setLocale } = useLanguage()
+  const { session, logout } = useSession()
   const [project, setProject] = useState<Project | null>(null)
   const [teams, setTeams] = useState<Team[]>([])
   const [loading, setLoading] = useState(true)
@@ -149,6 +151,15 @@ function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
             >
               {isDark ? '☀️' : '🌙'}
             </button>
+            {session && (
+              <div className="flex items-center gap-1.5 pl-2 border-l border-gray-200">
+                <span className="hidden sm:block text-xs text-gray-500">{session.user}</span>
+                {session.role === 'readonly' && (
+                  <span className="text-xs bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded font-medium">読取</span>
+                )}
+                <button onClick={logout} className="text-xs text-gray-400 hover:text-red-500 transition-colors">ログアウト</button>
+              </div>
+            )}
           </div>
         </div>
       </header>

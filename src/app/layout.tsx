@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import "./globals.css";
 import { DarkModeProvider } from "@/components/DarkModeProvider";
 import { LanguageProvider } from "@/components/LanguageProvider";
+import { SessionProvider } from "@/components/SessionProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -32,9 +33,11 @@ export default function RootLayout({
     >
       <Suspense fallback={null}>
         <body className="min-h-full flex flex-col">
-          <LanguageProvider>
-            <DarkModeProvider>{children}</DarkModeProvider>
-          </LanguageProvider>
+          <SessionProvider>
+            <LanguageProvider>
+              <DarkModeProvider>{children}</DarkModeProvider>
+            </LanguageProvider>
+          </SessionProvider>
         </body>
       </Suspense>
     </html>

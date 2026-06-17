@@ -5,6 +5,7 @@ import type { Member } from '@/lib/types'
 import { toTeam } from '@/lib/mappers'
 import { revalidateTag } from 'next/cache'
 import { log } from '@/lib/logger'
+import { assertWritable } from '@/lib/auth'
 
 type Params = { params: Promise<{ id: string }> }
 
@@ -19,6 +20,8 @@ async function getTeamRow(id: string) {
 }
 
 export async function PATCH(req: Request, { params }: Params) {
+  const deny = await assertWritable()
+  if (deny) return deny
   const { id } = await params
   const body = await req.json()
   const { data, error } = await getSupabase()
@@ -39,6 +42,8 @@ export async function PATCH(req: Request, { params }: Params) {
 }
 
 export async function DELETE(_req: Request, { params }: Params) {
+  const deny = await assertWritable()
+  if (deny) return deny
   const { id } = await params
   const { error } = await getSupabase().from('teams').delete().eq('id', id)
   if (error) {
@@ -51,6 +56,8 @@ export async function DELETE(_req: Request, { params }: Params) {
 }
 
 export async function POST(req: Request, { params }: Params) {
+  const deny = await assertWritable()
+  if (deny) return deny
   const { id } = await params
   const body = await req.json()
 

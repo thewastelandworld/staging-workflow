@@ -4,6 +4,7 @@ import { v4 as uuid } from 'uuid'
 import { toProject } from '@/lib/mappers'
 import { cacheLife, cacheTag, revalidateTag } from 'next/cache'
 import { log } from '@/lib/logger'
+import { assertWritable } from '@/lib/auth'
 
 async function fetchProjects() {
   'use cache'
@@ -27,6 +28,8 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
+  const deny = await assertWritable()
+  if (deny) return deny
   const body = await req.json()
   const project = {
     id: uuid(),

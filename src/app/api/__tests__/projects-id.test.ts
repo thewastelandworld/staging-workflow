@@ -9,6 +9,8 @@ vi.mock('next/cache', () => ({
   cacheTag: vi.fn(),
   revalidateTag: vi.fn(),
 }))
+vi.mock('@/lib/auth', () => ({ assertWritable: vi.fn().mockResolvedValue(null) }))
+vi.mock('@/lib/logger', () => ({ log: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }))
 
 import { GET, PATCH, DELETE } from '../projects/[id]/route'
 
