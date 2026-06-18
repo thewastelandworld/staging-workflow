@@ -22,10 +22,15 @@ export default function DashboardPage() {
   const [showForm, setShowForm] = useState(false)
 
   async function load() {
-    const [p, tm] = await Promise.all([
-      fetch('/api/projects').then((r) => r.json()),
-      fetch('/api/teams').then((r) => r.json()),
+    const [pRes, tmRes] = await Promise.all([
+      fetch('/api/projects'),
+      fetch('/api/teams'),
     ])
+    if (pRes.status === 401 || tmRes.status === 401) {
+      window.location.href = '/login'
+      return
+    }
+    const [p, tm] = await Promise.all([pRes.json(), tmRes.json()])
     setProjects(Array.isArray(p) ? p : [])
     setTeams(Array.isArray(tm) ? tm : [])
     setLoading(false)
