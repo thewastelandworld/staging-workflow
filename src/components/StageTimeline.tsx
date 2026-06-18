@@ -22,7 +22,7 @@ interface EditForm {
 }
 
 function isOverdue(stage: Stage): boolean {
-  if (stage.status === 'completed') return false
+  if (stage.status !== 'in_progress' && stage.status !== 'reviewing') return false
   return new Date() > new Date(stage.deadline)
 }
 

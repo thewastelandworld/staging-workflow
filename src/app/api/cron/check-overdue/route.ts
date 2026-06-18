@@ -24,7 +24,7 @@ export async function GET(req: Request) {
 
   for (const row of rows ?? []) {
     for (const stage of (row.stages ?? []) as Stage[]) {
-      if (stage.status !== 'completed' && new Date(stage.deadline) < now) {
+      if ((stage.status === 'in_progress' || stage.status === 'reviewing') && new Date(stage.deadline) < now) {
         overdue.push({ project: row.name, projectId: row.id, stage: stage.name, deadline: stage.deadline })
       }
     }
