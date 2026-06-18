@@ -40,6 +40,32 @@ export const log = {
   error: (msg: string, fields?: Fields) => emit('error', msg, fields),
 }
 
+export async function notifyOverdue(
+  stages: { project: string; projectId: string; stage: string; deadline: string }[],
+) {
+  const webhookUrl = process.env.MONITOR_WEBHOOK_URL
+  if (!webhookUrl) return
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL
+  const lines = stages.map(({ project, projectId, stage, deadline }) => {
+    const link = appUrl ? `<${appUrl}/projects/${projectId}|${project}>` : `*${project}*`
+    const overdueDays = Math.floor((Date.now() - new Date(deadline).getTime()) / 86400000)
+    return `• ${link} › ${stage}（${overdueDays}日超過）`
+  })
+
+  const res = await fetch(webhookUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      text: `⏰ *期間超過のステージがあります* (${stages.length}件)\n${lines.join('\n')}`,
+    }),
+  })
+  if (!res.ok) {
+    const body = await res.text().catch(() => '')
+    throw new Error(`Slack webhook returned ${res.status}: ${body}`)
+  }
+}
+
 export async function notifyProblem(
   projectId: string,
   projectName: string,

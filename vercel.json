@@ -3,5 +3,11 @@
     "src/app/api/**": {
       "regions": ["hnd1"]
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/check-overdue",
+      "schedule": "0 0 * * *"
+    }
+  ]
 }
