@@ -168,3 +168,27 @@ export async function notifyProblem(
     throw new Error(`Slack webhook returned ${res.status}: ${body}`)
   }
 }
+
+export async function notifyProblemResolved(
+  projectId: string,
+  projectName: string,
+  stageName: string,
+) {
+  const webhookUrl = process.env.MONITOR_WEBHOOK_URL
+  if (!webhookUrl) return
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL
+  const projectLink = appUrl ? `<${appUrl}/projects/${projectId}|${projectName}>` : `*${projectName}*`
+
+  const res = await fetch(webhookUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      text: `✅ *問題が解決されました*\n*プロジェクト:* ${projectLink}\n*ステージ:* ${stageName}`,
+    }),
+  })
+  if (!res.ok) {
+    const body = await res.text().catch(() => '')
+    throw new Error(`Slack webhook returned ${res.status}: ${body}`)
+  }
+}

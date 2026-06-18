@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { getSupabase } from '@/lib/supabase'
 import type { Stage, StageStatus, Team } from '@/lib/types'
 import { revalidateTag } from 'next/cache'
-import { log, notifyProblem, notifyStageStart, notifyReviewerTurn } from '@/lib/logger'
+import { log, notifyProblem, notifyProblemResolved, notifyStageStart, notifyReviewerTurn } from '@/lib/logger'
 import { assertWritable } from '@/lib/auth'
 
 type Params = { params: Promise<{ id: string; stageId: string }> }
@@ -201,6 +201,7 @@ export async function PATCH(req: Request, { params }: Params) {
   const newProblem = typeof body.problem === 'string' ? body.problem.trim() : undefined
   const prevProblem = stage.problem ?? ''
   const problemChanged = newProblem !== undefined && newProblem !== '' && newProblem !== prevProblem
+  const problemResolved = newProblem === '' && prevProblem !== ''
 
   stages[stageIdx] = updated
   const saveErr = await saveStages(id, stages)
@@ -213,6 +214,12 @@ export async function PATCH(req: Request, { params }: Params) {
     log.warn('Stage problem reported', { projectId: id, stageName: stage.name, problem: newProblem })
     await notifyProblem(id, row.name, stage.name, newProblem!).catch((err) => {
       log.error('Failed to send Slack notification', { projectId: id, stageId, error: String(err) })
+    })
+  }
+  if (problemResolved) {
+    log.info('Stage problem resolved', { projectId: id, stageName: stage.name })
+    await notifyProblemResolved(id, row.name, stage.name).catch((err) => {
+      log.error('Failed to send problem resolved notification', { projectId: id, stageId, error: String(err) })
     })
   }
 
