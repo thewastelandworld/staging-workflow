@@ -66,6 +66,84 @@ export async function notifyOverdue(
   }
 }
 
+export async function notifyStageStart(
+  projectId: string,
+  projectName: string,
+  stageName: string,
+  stageDescription: string | undefined,
+  deadline: string,
+  teamName: string,
+  prevStageName?: string,
+) {
+  const webhookUrl = process.env.MONITOR_WEBHOOK_URL
+  if (!webhookUrl) return
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL
+  const projectLink = appUrl ? `<${appUrl}/projects/${projectId}|${projectName}>` : `*${projectName}*`
+  const deadlineStr = new Date(deadline).toLocaleString('ja-JP', {
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit',
+  })
+
+  const lines = [
+    `🚀 *ステージ開始通知* — *${teamName}* チームの番です`,
+    `*ケース:* ${projectLink}`,
+    `*ステージ:* ${stageName}`,
+    prevStageName ? `*前ステージ:* ${prevStageName} が完了しました` : null,
+    stageDescription ? `*内容:* ${stageDescription}` : null,
+    `*⏰ 締め切り:* ${deadlineStr}`,
+  ].filter(Boolean).join('\n')
+
+  const res = await fetch(webhookUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text: lines }),
+  })
+  if (!res.ok) {
+    const body = await res.text().catch(() => '')
+    throw new Error(`Slack webhook returned ${res.status}: ${body}`)
+  }
+}
+
+export async function notifyReviewerTurn(
+  projectId: string,
+  projectName: string,
+  stageName: string,
+  checkContent: string | undefined,
+  deadline: string,
+  nextTeamName: string,
+  prevTeamName: string,
+) {
+  const webhookUrl = process.env.MONITOR_WEBHOOK_URL
+  if (!webhookUrl) return
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL
+  const projectLink = appUrl ? `<${appUrl}/projects/${projectId}|${projectName}>` : `*${projectName}*`
+  const deadlineStr = new Date(deadline).toLocaleString('ja-JP', {
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit',
+  })
+
+  const lines = [
+    `🔍 *確認依頼* — *${nextTeamName}* チームの番です`,
+    `*ケース:* ${projectLink}`,
+    `*ステージ:* ${stageName}`,
+    `*前チーム:* ${prevTeamName} の確認が完了しました`,
+    checkContent ? `*確認内容:* ${checkContent}` : null,
+    `*⏰ 締め切り:* ${deadlineStr}`,
+  ].filter(Boolean).join('\n')
+
+  const res = await fetch(webhookUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text: lines }),
+  })
+  if (!res.ok) {
+    const body = await res.text().catch(() => '')
+    throw new Error(`Slack webhook returned ${res.status}: ${body}`)
+  }
+}
+
 export async function notifyProblem(
   projectId: string,
   projectName: string,

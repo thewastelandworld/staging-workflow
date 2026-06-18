@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server'
 import { getSupabase } from '@/lib/supabase'
-import { sendStageStartEmail, sendReviewerEmail } from '@/lib/email'
 import type { Stage, StageStatus, Team } from '@/lib/types'
 import { revalidateTag } from 'next/cache'
-import { log, notifyProblem } from '@/lib/logger'
+import { log, notifyProblem, notifyStageStart, notifyReviewerTurn } from '@/lib/logger'
 import { assertWritable } from '@/lib/auth'
 
 type Params = { params: Promise<{ id: string; stageId: string }> }
@@ -72,15 +71,12 @@ async function advanceNextStage(
     emailSent: true,
   }
 
-  const project = { id: projectId, name: projectName, stages, description: '', createdAt: '' }
-  const result = await sendStageStartEmail(project, stages[idx], nextTeam, completedStageName)
+  const s = stages[idx]
+  await notifyStageStart(projectId, projectName, s.name, s.description, s.deadline, nextTeam.name, completedStageName)
+    .then(() => log.info('Stage start notified', { projectId, nextStageId: nextStage.id, team: nextTeam.name }))
+    .catch((err) => log.error('Stage start notification failed', { projectId, nextStageId: nextStage.id, error: String(err) }))
 
-  if (result.success) {
-    log.info('Stage start email sent', { projectId, nextStageId: nextStage.id, team: nextTeam.name, previewUrl: result.previewUrl })
-  } else {
-    log.error('Stage start email failed', { projectId, nextStageId: nextStage.id, error: result.error })
-  }
-  return result
+  return { success: true }
 }
 
 export async function PATCH(req: Request, { params }: Params) {
@@ -148,18 +144,9 @@ export async function PATCH(req: Request, { params }: Params) {
         const nextTeam = teams.find((t) => t.id === nextReviewer.teamId)
         const prevTeam = teams.find((t) => t.id === teamId)
         if (nextTeam && nextTeam.members.length > 0 && prevTeam) {
-          emailResult = await sendReviewerEmail(
-            { id, name: row.name, stages, description: '', createdAt: '' },
-            stage,
-            nextReviewer,
-            nextTeam,
-            prevTeam.name,
-          )
-          if (emailResult?.success) {
-            log.info('Reviewer email sent', { projectId: id, stageId, nextTeam: nextTeam.name, previewUrl: emailResult.previewUrl })
-          } else {
-            log.error('Reviewer email failed', { projectId: id, stageId, error: emailResult?.error })
-          }
+          await notifyReviewerTurn(id, row.name, stage.name, nextReviewer.checkContent, stage.deadline, nextTeam.name, prevTeam.name)
+            .then(() => log.info('Reviewer notified', { projectId: id, stageId, nextTeam: nextTeam.name }))
+            .catch((err) => log.error('Reviewer notification failed', { projectId: id, stageId, error: String(err) }))
         }
       }
     }
