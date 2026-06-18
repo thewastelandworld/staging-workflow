@@ -128,7 +128,7 @@ export async function notifyReviewerTurn(
     `🔍 *確認依頼* — *${nextTeamName}* チームの番です`,
     `*ケース:* ${projectLink}`,
     `*ステージ:* ${stageName}`,
-    `*前チーム:* ${prevTeamName} の確認が完了しました`,
+    `*前工程:* ${prevTeamName} が完了しました`,
     checkContent ? `*確認内容:* ${checkContent}` : null,
     `*⏰ 締め切り:* ${deadlineStr}`,
   ].filter(Boolean).join('\n')

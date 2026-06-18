@@ -135,7 +135,7 @@ export async function PATCH(req: Request, { params }: Params) {
     let emailResult = null
     const teams = await getTeams()
 
-    if (allChecked && stage.status !== 'completed') {
+    if (allChecked) {
       emailResult = await advanceNextStage(id, row.name, stages, teams, stageId, stage.name)
       if (emailResult) await saveStages(id, stages)
     } else if (!allChecked) {
@@ -211,8 +211,25 @@ export async function PATCH(req: Request, { params }: Params) {
   let emailResult = null
   if (prevStatus !== 'completed' && newStatus === 'completed') {
     const teams = await getTeams()
-    emailResult = await advanceNextStage(id, row.name, stages, teams, stageId, stage.name)
-    if (emailResult) await saveStages(id, stages)
+    const pendingReviewers = (updated.reviewers ?? [])
+      .filter((r) => !r.checkedAt)
+      .sort((a, b) => a.order - b.order)
+
+    if (pendingReviewers.length > 0) {
+      // 確認チームがいる場合 → 最初の確認チームへ通知（次ステージはまだ開始しない）
+      const firstReviewer = pendingReviewers[0]
+      const reviewerTeam = teams.find((t) => t.id === firstReviewer.teamId)
+      const workingTeam = teams.find((t) => t.id === updated.teamId)
+      if (reviewerTeam && workingTeam) {
+        await notifyReviewerTurn(id, row.name, updated.name, firstReviewer.checkContent, updated.deadline, reviewerTeam.name, workingTeam.name)
+          .then(() => log.info('First reviewer notified on completion', { projectId: id, stageId, reviewerTeam: reviewerTeam.name }))
+          .catch((err) => log.error('First reviewer notification failed', { projectId: id, stageId, error: String(err) }))
+      }
+    } else {
+      // 確認チームなし → 次ステージを即時開始
+      emailResult = await advanceNextStage(id, row.name, stages, teams, stageId, stage.name)
+      if (emailResult) await saveStages(id, stages)
+    }
   }
 
   revalidateTag('projects', { expire: 0 })
