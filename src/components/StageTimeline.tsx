@@ -490,7 +490,7 @@ export default function StageTimeline({ project, teams, onStageUpdate, onStageDe
                                       </span>
                                     )}
                                   </div>
-                                  {reviewer.checkContent && !isActiveReviewer && (
+                                  {reviewer.checkContent && !(isActiveReviewer && stage.status === 'reviewing') && (
                                     <div className={`ml-6 px-2 py-1.5 border rounded text-xs whitespace-pre-wrap ${isDone ? 'bg-gray-50 border-gray-100 text-gray-500' : 'bg-gray-50 border-gray-200 text-gray-500'}`}>
                                       <span className="font-medium text-gray-400">{t.checkContentLabel}: </span>{reviewer.checkContent}
                                     </div>
