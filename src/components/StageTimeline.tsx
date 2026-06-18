@@ -32,6 +32,7 @@ function getEffectiveStatus(stage: Stage): StageStatus {
   return stage.status
 }
 
+
 function formatDeadline(iso: string) {
   const d = new Date(iso)
   const now = new Date()
@@ -130,11 +131,11 @@ export default function StageTimeline({ project, teams, onStageUpdate, onStageDe
     const res = await fetch(`/api/projects/${project.id}/stages/${stage.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: 'completed' }),
+      body: JSON.stringify({ status: 'reviewing' }),
     })
     const data = await res.json()
     if (data.emailResult?.previewUrl) setEmailPreview(data.emailResult.previewUrl)
-    await onStageUpdate(stage.id, { status: 'completed' })
+    await onStageUpdate(stage.id, {})
     setLoadingId(null)
   }
 
@@ -215,6 +216,7 @@ export default function StageTimeline({ project, teams, onStageUpdate, onStageDe
               hasProblem ? 'border-red-500 bg-red-50 shadow-red-100' :
               status === 'overdue' ? 'border-red-400 bg-red-50 shadow-red-100' :
               status === 'in_progress' ? 'border-blue-300 bg-blue-50 shadow-blue-100' :
+              stage.status === 'reviewing' ? 'border-purple-300 bg-purple-50 shadow-purple-100' :
               status === 'completed' ? 'border-green-300 bg-white' :
               'border-gray-200 bg-white'
 
@@ -223,6 +225,7 @@ export default function StageTimeline({ project, teams, onStageUpdate, onStageDe
               hasProblem ? 'bg-red-600 ring-red-300' :
               status === 'overdue' ? 'bg-red-500 ring-red-200' :
               status === 'in_progress' ? 'bg-blue-500 ring-blue-200' :
+              stage.status === 'reviewing' ? 'bg-purple-500 ring-purple-200' :
               status === 'completed' ? 'bg-green-500 ring-green-200' :
               'bg-gray-300 ring-gray-100'
 
@@ -347,6 +350,12 @@ export default function StageTimeline({ project, teams, onStageUpdate, onStageDe
                         </div>
                         {!isReadOnly && (
                           <div className="flex items-center gap-2">
+                            {(status === 'completed' || stage.status === 'reviewing') && (
+                              <button onClick={() => handleRestart(stage)} disabled={isActive}
+                                className="text-xs px-2 py-1 text-orange-600 border border-orange-300 hover:bg-orange-50 rounded-lg disabled:opacity-50 transition-colors">
+                                {isActive ? '...' : t.restart}
+                              </button>
+                            )}
                             <button onClick={() => startEdit(stage)}
                               className="text-xs px-2 py-1 text-gray-500 hover:text-blue-600 hover:bg-blue-50 border border-gray-200 hover:border-blue-300 rounded-lg transition-colors">
                               {t.edit}
@@ -481,8 +490,8 @@ export default function StageTimeline({ project, teams, onStageUpdate, onStageDe
                                       </span>
                                     )}
                                   </div>
-                                  {isDone && reviewer.checkContent && (
-                                    <div className="ml-6 px-2 py-1.5 bg-gray-50 border border-gray-100 rounded text-xs text-gray-500 whitespace-pre-wrap">
+                                  {reviewer.checkContent && !isActiveReviewer && (
+                                    <div className={`ml-6 px-2 py-1.5 border rounded text-xs whitespace-pre-wrap ${isDone ? 'bg-gray-50 border-gray-100 text-gray-500' : 'bg-gray-50 border-gray-200 text-gray-500'}`}>
                                       <span className="font-medium text-gray-400">{t.checkContentLabel}: </span>{reviewer.checkContent}
                                     </div>
                                   )}
@@ -491,7 +500,7 @@ export default function StageTimeline({ project, teams, onStageUpdate, onStageDe
                                       <span className="font-medium text-green-700">{t.reviewNoteLabel}: </span>{reviewer.note}
                                     </div>
                                   )}
-                                  {!isReadOnly && isActiveReviewer && (status === 'in_progress' || status === 'overdue' || status === 'completed') && (
+                                  {!isReadOnly && isActiveReviewer && stage.status === 'reviewing' && (
                                     <div className="ml-6 space-y-1.5">
                                       {reviewer.checkContent && (
                                         <div className="px-2 py-1.5 bg-blue-50 border border-blue-100 rounded text-xs text-blue-800 whitespace-pre-wrap">
@@ -520,7 +529,7 @@ export default function StageTimeline({ project, teams, onStageUpdate, onStageDe
                         </div>
                       )}
 
-                      {!isReadOnly && (
+                      {!isReadOnly && (status === 'pending' || status === 'in_progress' || (status === 'overdue' && stage.status !== 'reviewing')) && (
                         <div className="mt-3 flex gap-2 flex-wrap">
                           {status === 'pending' && (
                             <button onClick={() => handleStart(stage)} disabled={isActive}
@@ -528,16 +537,10 @@ export default function StageTimeline({ project, teams, onStageUpdate, onStageDe
                               {isActive ? '...' : t.start}
                             </button>
                           )}
-                          {(status === 'in_progress' || status === 'overdue') && (
+                          {(status === 'in_progress' || (status === 'overdue' && stage.status !== 'reviewing')) && (
                             <button onClick={() => handleComplete(stage)} disabled={isActive}
                               className="text-sm px-3 py-1 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors">
                               {isActive ? t.completing : t.complete}
-                            </button>
-                          )}
-                          {status === 'completed' && (
-                            <button onClick={() => handleRestart(stage)} disabled={isActive}
-                              className="text-sm px-3 py-1 bg-orange-500 text-white rounded-lg hover:bg-orange-600 disabled:opacity-50 transition-colors">
-                              {isActive ? '...' : t.restart}
                             </button>
                           )}
                         </div>

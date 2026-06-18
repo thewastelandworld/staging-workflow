@@ -20,9 +20,9 @@ export default function BulkCheckContentEditor({ projectId, stages, teams, onSav
   const [saving, setSaving] = useState(false)
   const [doneCount, setDoneCount] = useState<number | null>(null)
 
-  // 待機中ステージで確認チームを持つもの
+  // 待機中・進行中ステージで確認チームを持つもの
   const pendingStages = useMemo(
-    () => stages.filter((s) => s.status === 'pending' && (s.reviewers ?? []).length > 0),
+    () => stages.filter((s) => (s.status === 'pending' || s.status === 'in_progress') && (s.reviewers ?? []).length > 0),
     [stages]
   )
 

@@ -26,8 +26,8 @@ export default function DashboardPage() {
       fetch('/api/projects').then((r) => r.json()),
       fetch('/api/teams').then((r) => r.json()),
     ])
-    setProjects(p)
-    setTeams(tm)
+    setProjects(Array.isArray(p) ? p : [])
+    setTeams(Array.isArray(tm) ? tm : [])
     setLoading(false)
   }
 

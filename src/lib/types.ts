@@ -1,4 +1,4 @@
-export type StageStatus = 'pending' | 'in_progress' | 'completed' | 'overdue'
+export type StageStatus = 'pending' | 'in_progress' | 'reviewing' | 'completed' | 'overdue'
 
 export interface Member {
   id: string

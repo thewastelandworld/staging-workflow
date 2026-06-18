@@ -63,7 +63,7 @@ export default function AddStageForm({ projectId, teams, nextOrder, existingStag
       name: src.name + ' (copy)',
       description: src.description ?? '',
       teamId: src.teamId,
-      deadline: '',
+      deadline: todayDatetimeLocal(),
       order: nextOrder,
     })
     setReviewers(

@@ -114,7 +114,7 @@ export async function notifyReviewerTurn(
   nextTeamName: string,
   prevTeamName: string,
 ) {
-  const webhookUrl = process.env.MONITOR_WEBHOOK_URL
+  const webhookUrl = process.env.REVIEWER_WEBHOOK_URL || process.env.MONITOR_WEBHOOK_URL
   if (!webhookUrl) return
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL

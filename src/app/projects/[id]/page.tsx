@@ -40,7 +40,7 @@ function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
       fetch('/api/teams').then((r) => r.json()),
     ])
     setProject(p)
-    setTeams(tm)
+    setTeams(Array.isArray(tm) ? tm : [])
     setLoading(false)
   }
 
