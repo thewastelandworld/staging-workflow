@@ -4,7 +4,7 @@ import { hashPassword } from '@/lib/password'
 const USERNAME_RE = /^[a-zA-Z0-9_-]{3,32}$/
 
 export async function POST(req: Request) {
-  const { username, password } = await req.json()
+  const { username, displayName, email, password, teamId } = await req.json()
 
   if (!USERNAME_RE.test(username)) {
     return Response.json(
@@ -18,6 +18,14 @@ export async function POST(req: Request) {
       { error: 'パスワードは8文字以上で入力してください' },
       { status: 400 }
     )
+  }
+
+  if (!email || typeof email !== 'string' || !email.includes('@')) {
+    return Response.json({ error: 'メールアドレスを入力してください' }, { status: 400 })
+  }
+
+  if (!teamId || typeof teamId !== 'string') {
+    return Response.json({ error: 'チームを選択してください' }, { status: 400 })
   }
 
   const reserved = ['admin', 'demo']
@@ -53,18 +61,42 @@ export async function POST(req: Request) {
       return Response.json({ error: 'そのユーザー名はすでに使用されています' }, { status: 409 })
     }
 
+    const { data: teamRow, error: teamError } = await supabase
+      .from('teams')
+      .select('id')
+      .eq('id', teamId)
+      .single()
+
+    if (teamError || !teamRow) {
+      return Response.json({ error: '選択されたチームが見つかりません' }, { status: 400 })
+    }
+
     const password_hash = await hashPassword(password)
 
-    const { error: insertError } = await supabase.from('users').insert({
+    const { data: newUser, error: insertError } = await supabase.from('users').insert({
       username,
       password_hash,
-      role: 'readonly',
-    })
+      permission: 'readonly',
+      display_name: (typeof displayName === 'string' && displayName.trim()) ? displayName.trim() : null,
+      email: email.trim(),
+    }).select('id').single()
 
-    if (insertError) {
+    if (insertError || !newUser) {
       const msg = process.env.NODE_ENV === 'development'
-        ? `Insert error: ${insertError.message}`
+        ? `Insert error: ${insertError?.message}`
         : '登録に失敗しました'
+      return Response.json({ error: msg }, { status: 500 })
+    }
+
+    const { error: utError } = await supabase
+      .from('user_teams')
+      .insert({ user_id: newUser.id, team_id: teamId })
+
+    if (utError) {
+      await supabase.from('users').delete().eq('id', newUser.id)
+      const msg = process.env.NODE_ENV === 'development'
+        ? `Team join error: ${utError.message}`
+        : 'チームへの参加に失敗しました。もう一度お試しください。'
       return Response.json({ error: msg }, { status: 500 })
     }
 

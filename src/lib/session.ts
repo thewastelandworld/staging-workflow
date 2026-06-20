@@ -1,7 +1,7 @@
 import 'server-only'
 
-export type Role = 'admin' | 'user' | 'readonly'
-export interface Session { user: string; role: Role; exp: number }
+export type Permission = 'admin' | 'user' | 'readonly'
+export interface Session { user: string; permission: Permission; exp: number }
 
 function secret() {
   return process.env.SESSION_SECRET ?? 'dev-secret-change-in-production'

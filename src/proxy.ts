@@ -7,7 +7,13 @@ const SESSION_DURATION_S = 10 * 60
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl
 
-  if (pathname.startsWith('/login') || pathname.startsWith('/register') || pathname.startsWith('/api/auth/') || pathname.startsWith('/api/cron/')) {
+  if (
+    pathname.startsWith('/login') ||
+    pathname.startsWith('/register') ||
+    pathname.startsWith('/api/auth/') ||
+    pathname.startsWith('/api/cron/') ||
+    (pathname === '/api/teams' && req.method === 'GET')
+  ) {
     return NextResponse.next()
   }
 

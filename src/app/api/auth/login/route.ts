@@ -2,48 +2,48 @@ import { cookies } from 'next/headers'
 import { signSession } from '@/lib/session'
 import { getSupabase } from '@/lib/supabase'
 import { verifyPassword } from '@/lib/password'
-import type { Role } from '@/lib/session'
+import type { Permission } from '@/lib/session'
 
 export async function POST(req: Request) {
   const { username, password } = await req.json()
 
-  let role: Role | null = null
+  let permission: Permission | null = null
 
   // Check Supabase users table first
   try {
     const supabase = getSupabase()
     const { data: user } = await supabase
       .from('users')
-      .select('password_hash, role')
+      .select('password_hash, permission')
       .eq('username', username)
       .single()
 
     if (user) {
       const valid = await verifyPassword(password, user.password_hash)
-      if (valid) role = user.role as Role
+      if (valid) permission = user.permission as Permission
     }
   } catch {
     // Supabase unavailable — fall through to hardcoded credentials
   }
 
   // Hardcoded fallback credentials
-  if (!role) {
+  if (!permission) {
     const adminUser = process.env.AUTH_ADMIN_USER ?? 'admin'
     const adminPass = process.env.AUTH_ADMIN_PASS ?? 'admin'
     if (username === adminUser && password === adminPass) {
-      role = 'admin'
+      permission = 'admin'
     } else if (username === 'demo' && password === 'demo') {
-      role = 'readonly'
+      permission = 'readonly'
     }
   }
 
-  if (!role) {
+  if (!permission) {
     return Response.json({ error: 'Invalid credentials' }, { status: 401 })
   }
 
   const token = await signSession({
     user: username,
-    role,
+    permission,
     exp: Date.now() + 10 * 60 * 1000,
   })
 
@@ -56,5 +56,5 @@ export async function POST(req: Request) {
     maxAge: 10 * 60,
   })
 
-  return Response.json({ ok: true, role })
+  return Response.json({ ok: true, permission })
 }

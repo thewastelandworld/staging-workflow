@@ -11,7 +11,7 @@ async function fetchProject(id: string) {
   cacheTag('projects', `project-${id}`)
   const { data, error } = await getSupabase()
     .from('projects')
-    .select('*')
+    .select('*, stages(*, stage_reviewers(*))')
     .eq('id', id)
     .single()
   if (error || !data) return null

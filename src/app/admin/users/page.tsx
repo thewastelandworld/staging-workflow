@@ -8,16 +8,18 @@ import { useRouter } from 'next/navigation'
 interface User {
   id: string
   username: string
-  role: 'admin' | 'user' | 'readonly'
+  display_name: string | null
+  email: string | null
+  permission: 'admin' | 'user' | 'readonly'
 }
 
-const ROLE_LABEL: Record<string, string> = {
+const PERMISSION_LABEL: Record<string, string> = {
   admin: '管理員',
   user: '使用者',
   readonly: '読み取り専用',
 }
 
-const ROLE_STYLE: Record<string, string> = {
+const PERMISSION_STYLE: Record<string, string> = {
   admin: 'bg-blue-100 text-blue-700',
   user: 'bg-green-100 text-green-700',
   readonly: 'bg-yellow-100 text-yellow-700',
@@ -32,7 +34,7 @@ export default function AdminUsersPage() {
   const [busy, setBusy] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!sessionLoading && session?.role !== 'admin') {
+    if (!sessionLoading && session?.permission !== 'admin') {
       router.replace('/')
     }
   }, [session, sessionLoading, router])
@@ -49,24 +51,24 @@ export default function AdminUsersPage() {
   }
 
   useEffect(() => {
-    if (!sessionLoading && session?.role === 'admin') {
+    if (!sessionLoading && session?.permission === 'admin') {
       load()
     }
   }, [session, sessionLoading])
 
-  async function changeRole(user: User, newRole: 'user' | 'readonly') {
-    if (newRole === user.role) return
+  async function changePermission(user: User, newPermission: 'user' | 'readonly') {
+    if (newPermission === user.permission) return
     setBusy(user.id)
     const res = await fetch(`/api/admin/users/${user.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ role: newRole }),
+      body: JSON.stringify({ permission: newPermission }),
     })
     if (!res.ok) {
       const data = await res.json()
       alert(data.error ?? '権限変更に失敗しました')
     } else {
-      setUsers(prev => prev.map(u => u.id === user.id ? { ...u, role: newRole } : u))
+      setUsers(prev => prev.map(u => u.id === user.id ? { ...u, permission: newPermission } : u))
     }
     setBusy(null)
   }
@@ -133,7 +135,8 @@ export default function AdminUsersPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200 text-xs text-gray-500 uppercase tracking-wide">
-                  <th className="text-left px-5 py-3 font-medium">ユーザー名</th>
+                  <th className="text-left px-5 py-3 font-medium">ユーザー</th>
+                  <th className="text-left px-5 py-3 font-medium">メール</th>
                   <th className="text-left px-5 py-3 font-medium">権限</th>
                   <th className="px-5 py-3" />
                 </tr>
@@ -141,30 +144,36 @@ export default function AdminUsersPage() {
               <tbody className="divide-y divide-gray-100">
                 {users.map(user => {
                   const isSelf = user.username === session?.user
-                  const isAdmin = user.role === 'admin'
+                  const isAdmin = user.permission === 'admin'
                   const isBusy = busy === user.id
                   const canEdit = !isSelf && !isAdmin
 
                   return (
                     <tr key={user.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-5 py-4 font-medium text-gray-900">
-                        {user.username}
-                        {isSelf && (
-                          <span className="ml-2 text-xs text-blue-500 font-normal">（自分）</span>
-                        )}
+                      <td className="px-5 py-4">
+                        <div className="font-medium text-gray-900">
+                          {user.display_name ?? user.username}
+                          {isSelf && (
+                            <span className="ml-2 text-xs text-blue-500 font-normal">（自分）</span>
+                          )}
+                        </div>
+                        <div className="text-xs text-gray-400 mt-0.5">@{user.username}</div>
+                      </td>
+                      <td className="px-5 py-4 text-sm text-gray-500">
+                        {user.email ?? <span className="text-gray-300">—</span>}
                       </td>
                       <td className="px-5 py-4">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${ROLE_STYLE[user.role]}`}>
-                          {ROLE_LABEL[user.role]}
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${PERMISSION_STYLE[user.permission]}`}>
+                          {PERMISSION_LABEL[user.permission]}
                         </span>
                       </td>
                       <td className="px-5 py-4">
                         <div className="flex items-center justify-end gap-2">
                           {canEdit ? (
                             <select
-                              value={user.role}
+                              value={user.permission}
                               disabled={isBusy}
-                              onChange={e => changeRole(user, e.target.value as 'user' | 'readonly')}
+                              onChange={e => changePermission(user, e.target.value as 'user' | 'readonly')}
                               className="text-xs px-2 py-1.5 border border-gray-300 rounded-lg text-gray-600 bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-blue-400"
                             >
                               <option value="user">使用者</option>

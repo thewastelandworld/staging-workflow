@@ -36,7 +36,9 @@ describe('toTeam', () => {
     name: 'Design Team',
     color: '#3b82f6',
     created_at: '2024-02-01T00:00:00Z',
-    members: [{ id: 'm1', name: 'Alice', email: 'alice@example.com', role: 'Lead' }],
+    user_teams: [
+      { role: 'Lead', users: { id: 'u1', username: 'alice', display_name: 'Alice', email: 'alice@example.com' } },
+    ],
   }
 
   it('maps all fields from a DB row', () => {
@@ -46,11 +48,15 @@ describe('toTeam', () => {
     expect(t.color).toBe('#3b82f6')
     expect(t.createdAt).toBe('2024-02-01T00:00:00Z')
     expect(t.members).toHaveLength(1)
+    expect(t.members[0].id).toBe('u1')
+    expect(t.members[0].username).toBe('alice')
     expect(t.members[0].name).toBe('Alice')
+    expect(t.members[0].email).toBe('alice@example.com')
+    expect(t.members[0].role).toBe('Lead')
   })
 
-  it('defaults members to empty array when null', () => {
-    const t = toTeam({ ...base, members: null })
+  it('defaults members to empty array when no user_teams', () => {
+    const t = toTeam({ ...base, user_teams: undefined })
     expect(t.members).toEqual([])
   })
 })

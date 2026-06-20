@@ -1,10 +1,11 @@
 export type StageStatus = 'pending' | 'in_progress' | 'reviewing' | 'completed' | 'overdue'
 
 export interface Member {
-  id: string
-  name: string
-  email: string
-  role?: string
+  id: string      // users.id
+  username: string
+  name: string    // users.display_name
+  email: string   // users.email
+  role?: string   // team-specific role from user_teams.role
 }
 
 export interface Team {
@@ -45,6 +46,7 @@ export interface Project {
   name: string
   description?: string
   createdAt: string
+  createdBy?: string  // username of the user who created this project
   stages: Stage[]
 }
 

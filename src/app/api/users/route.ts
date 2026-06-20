@@ -3,14 +3,13 @@ import { getSupabase } from '@/lib/supabase'
 
 export async function GET() {
   const session = await getSession()
-  if (!session || session.permission !== 'admin') {
-    return Response.json({ error: 'Forbidden' }, { status: 403 })
+  if (!session) {
+    return Response.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const supabase = getSupabase()
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from('users')
-    .select('id, username, permission, display_name, email')
+    .select('id, username, display_name, email')
     .order('username', { ascending: true })
 
   if (error) {

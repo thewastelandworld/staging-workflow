@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getSupabase } from '@/lib/supabase'
 import { log, notifyOverdue } from '@/lib/logger'
-import type { Stage } from '@/lib/types'
 
 export async function GET(req: Request) {
   const cronSecret = process.env.CRON_SECRET
@@ -12,23 +11,24 @@ export async function GET(req: Request) {
     }
   }
 
-  const supabase = getSupabase()
-  const { data: rows, error } = await supabase.from('projects').select('id, name, stages')
+  const now = new Date()
+  const { data: rows, error } = await getSupabase()
+    .from('stages')
+    .select('id, name, deadline, project_id, projects(name)')
+    .in('status', ['in_progress', 'reviewing'])
+    .lt('deadline', now.toISOString())
+
   if (error) {
-    log.error('Cron: failed to fetch projects', { error: error.message })
+    log.error('Cron: failed to fetch overdue stages', { error: error.message })
     return NextResponse.json({ error: 'DB error' }, { status: 500 })
   }
 
-  const now = new Date()
-  const overdue: { project: string; projectId: string; stage: string; deadline: string }[] = []
-
-  for (const row of rows ?? []) {
-    for (const stage of (row.stages ?? []) as Stage[]) {
-      if ((stage.status === 'in_progress' || stage.status === 'reviewing') && new Date(stage.deadline) < now) {
-        overdue.push({ project: row.name, projectId: row.id, stage: stage.name, deadline: stage.deadline })
-      }
-    }
-  }
+  const overdue = (rows ?? []).map((row) => ({
+    project: (row.projects as { name: string } | null)?.name ?? '',
+    projectId: row.project_id as string,
+    stage: row.name as string,
+    deadline: row.deadline as string,
+  }))
 
   log.info('Cron: overdue check done', { overdue: overdue.length })
 

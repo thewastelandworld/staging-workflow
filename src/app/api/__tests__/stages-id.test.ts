@@ -4,15 +4,15 @@ const mockFrom = vi.fn()
 vi.mock('@/lib/supabase', () => ({
   getSupabase: () => ({ from: mockFrom }),
 }))
-vi.mock('@/lib/email', () => ({
-  sendStageStartEmail: vi.fn().mockResolvedValue({ success: true, previewUrl: 'http://preview' }),
-  sendReviewerEmail: vi.fn().mockResolvedValue({ success: true, previewUrl: 'http://preview' }),
-}))
 vi.mock('next/cache', () => ({
   revalidateTag: vi.fn(),
 }))
 vi.mock('@/lib/logger', () => ({
   log: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+  notifyProblem: vi.fn().mockResolvedValue(undefined),
+  notifyProblemResolved: vi.fn().mockResolvedValue(undefined),
+  notifyStageStart: vi.fn().mockResolvedValue(undefined),
+  notifyReviewerTurn: vi.fn().mockResolvedValue(undefined),
 }))
 vi.mock('@/lib/auth', () => ({ assertWritable: vi.fn().mockResolvedValue(null) }))
 
@@ -22,8 +22,8 @@ function params(id: string, stageId: string) {
   return { params: Promise.resolve({ id, stageId }) }
 }
 
-// .from('projects').select('*').eq().single()
-function projectChain(result: unknown) {
+// .from('stages').select('*, stage_reviewers(*), projects(id,name)').eq().single()
+function stageChain(result: unknown) {
   const q: Record<string, () => unknown> = {}
   q.select = () => q
   q.eq = () => q
@@ -31,11 +31,22 @@ function projectChain(result: unknown) {
   return q
 }
 
-// .from('projects').update({}).eq()
+// .from('stages').update({}).eq() or
+// .from('stage_reviewers').update({}).eq()
 function updateChain(result: unknown) {
   const q: Record<string, () => unknown> = {}
   q.update = () => q
   q.eq = () => Promise.resolve(result)
+  return q
+}
+
+// .from('stage_reviewers').update({}).eq('stage_id', x).eq('team_id', y)
+function reviewerUpdateChain(result: unknown) {
+  const inner: Record<string, () => unknown> = {}
+  inner.eq = () => Promise.resolve(result)
+  const q: Record<string, () => unknown> = {}
+  q.update = () => q
+  q.eq = () => inner
   return q
 }
 
@@ -46,31 +57,77 @@ function teamsChain(data: unknown) {
   return q
 }
 
+// .from('stages').select().eq().gt().order().limit().maybeSingle() — advanceNextStage
+function nextStageChain(result: unknown) {
+  const q: Record<string, () => unknown> = {}
+  q.select = () => q
+  q.eq = () => q
+  q.gt = () => q
+  q.order = () => q
+  q.limit = () => q
+  q.maybeSingle = () => Promise.resolve(result)
+  return q
+}
+
+// .from('stage_reviewers').delete().eq() or .from('stages').delete().eq()
+function deleteChain(result: unknown) {
+  const q: Record<string, () => unknown> = {}
+  q.delete = () => q
+  q.eq = () => Promise.resolve(result)
+  return q
+}
+
+// .from('stage_reviewers').insert()
+function insertChain(result: unknown) {
+  const q: Record<string, () => unknown> = {}
+  q.insert = () => Promise.resolve(result)
+  return q
+}
+
+// .from('stages').select('name, project_id').eq().maybeSingle() — DELETE fetch
+function maybeSingleChain(result: unknown) {
+  const q: Record<string, () => unknown> = {}
+  q.select = () => q
+  q.eq = () => q
+  q.maybeSingle = () => Promise.resolve(result)
+  return q
+}
+
 const TEAM = {
   id: 't1', name: 'Dev Team', color: '#000', created_at: '2024-01-01',
   members: [{ id: 'm1', name: 'Alice', email: 'alice@example.com', role: '' }],
 }
 
-const STAGE = {
-  id: 's1', projectId: 'p1', order: 1, name: 'Design Review',
-  teamId: 't1', deadline: '2025-12-31T00:00:00Z',
-  status: 'pending', emailSent: false, reviewers: [],
+const STAGE_ROW = {
+  id: 's1',
+  project_id: 'p1',
+  order: 1,
+  name: 'Design Review',
+  team_id: 't1',
+  deadline: '2025-12-31T00:00:00Z',
+  status: 'pending',
+  email_sent: false,
+  description: null,
+  started_at: null,
+  completed_at: null,
+  notes: null,
+  problem: null,
+  stage_reviewers: [],
+  projects: { id: 'p1', name: 'Test Proj' },
 }
 
-const PROJECT_ROW = { id: 'p1', name: 'Test Proj', stages: [STAGE] }
-
 describe('PATCH /api/projects/[id]/stages/[stageId]', () => {
-  beforeEach(() => vi.clearAllMocks())
+  beforeEach(() => vi.resetAllMocks())
 
   it('returns 404 when project not found', async () => {
-    mockFrom.mockReturnValue(projectChain({ data: null, error: { message: 'not found' } }))
+    mockFrom.mockReturnValue(stageChain({ data: null, error: { message: 'not found' } }))
     const req = new Request('http://localhost', { method: 'PATCH', body: JSON.stringify({ name: 'X' }) })
     const res = await PATCH(req, params('missing', 's1'))
     expect(res.status).toBe(404)
   })
 
   it('returns 404 when stage not found', async () => {
-    mockFrom.mockReturnValue(projectChain({ data: PROJECT_ROW, error: null }))
+    mockFrom.mockReturnValue(stageChain({ data: null, error: { message: 'not found' } }))
     const req = new Request('http://localhost', { method: 'PATCH', body: JSON.stringify({ name: 'X' }) })
     const res = await PATCH(req, params('p1', 'no-such-stage'))
     expect(res.status).toBe(404)
@@ -78,7 +135,7 @@ describe('PATCH /api/projects/[id]/stages/[stageId]', () => {
 
   it('updates stage fields and returns 200', async () => {
     mockFrom
-      .mockReturnValueOnce(projectChain({ data: PROJECT_ROW, error: null }))
+      .mockReturnValueOnce(stageChain({ data: STAGE_ROW, error: null }))
       .mockReturnValueOnce(updateChain({ error: null }))
 
     const req = new Request('http://localhost', {
@@ -94,7 +151,7 @@ describe('PATCH /api/projects/[id]/stages/[stageId]', () => {
 
   it('sets startedAt when status changes to in_progress', async () => {
     mockFrom
-      .mockReturnValueOnce(projectChain({ data: PROJECT_ROW, error: null }))
+      .mockReturnValueOnce(stageChain({ data: STAGE_ROW, error: null }))
       .mockReturnValueOnce(updateChain({ error: null }))
 
     const req = new Request('http://localhost', {
@@ -109,9 +166,10 @@ describe('PATCH /api/projects/[id]/stages/[stageId]', () => {
 
   it('sets completedAt when status changes to completed', async () => {
     mockFrom
-      .mockReturnValueOnce(projectChain({ data: PROJECT_ROW, error: null }))
-      .mockReturnValueOnce(updateChain({ error: null }))
-      .mockReturnValueOnce(teamsChain({ data: [TEAM] })) // getTeams for advanceNextStage
+      .mockReturnValueOnce(stageChain({ data: STAGE_ROW, error: null }))
+      .mockReturnValueOnce(updateChain({ error: null }))        // update stage
+      .mockReturnValueOnce(teamsChain({ data: [TEAM] }))        // getTeams
+      .mockReturnValueOnce(nextStageChain({ data: null, error: null })) // advanceNextStage - no next
 
     const req = new Request('http://localhost', {
       method: 'PATCH',
@@ -124,13 +182,16 @@ describe('PATCH /api/projects/[id]/stages/[stageId]', () => {
   })
 
   it('resets reviewers and emailSent on restart', async () => {
-    const completedStage = {
-      ...STAGE, status: 'completed', emailSent: true,
-      reviewers: [{ teamId: 't2', order: 1, checkContent: 'X', checkedAt: '2025-01-01', note: 'OK' }],
+    const completedStageRow = {
+      ...STAGE_ROW,
+      status: 'completed',
+      email_sent: true,
+      stage_reviewers: [{ stage_id: 's1', team_id: 't2', order: 1, check_content: 'X', checked_at: '2025-01-01', note: 'OK' }],
     }
     mockFrom
-      .mockReturnValueOnce(projectChain({ data: { ...PROJECT_ROW, stages: [completedStage] }, error: null }))
-      .mockReturnValueOnce(updateChain({ error: null }))
+      .mockReturnValueOnce(stageChain({ data: completedStageRow, error: null }))
+      .mockReturnValueOnce(updateChain({ error: null }))  // update stage
+      .mockReturnValueOnce(updateChain({ error: null }))  // clear stage_reviewers
 
     const req = new Request('http://localhost', {
       method: 'PATCH',
@@ -144,13 +205,16 @@ describe('PATCH /api/projects/[id]/stages/[stageId]', () => {
   })
 
   it('updates reviewer checkContent via bulk edit (reviewers in body)', async () => {
-    const stageWithReviewer = {
-      ...STAGE, status: 'in_progress',
-      reviewers: [{ teamId: 't2', order: 1, checkContent: '旧内容' }],
+    const stageRowWithReviewer = {
+      ...STAGE_ROW,
+      status: 'in_progress',
+      stage_reviewers: [{ stage_id: 's1', team_id: 't2', order: 1, check_content: '旧内容', checked_at: null, note: null }],
     }
     mockFrom
-      .mockReturnValueOnce(projectChain({ data: { ...PROJECT_ROW, stages: [stageWithReviewer] }, error: null }))
-      .mockReturnValueOnce(updateChain({ error: null }))
+      .mockReturnValueOnce(stageChain({ data: stageRowWithReviewer, error: null }))
+      .mockReturnValueOnce(updateChain({ error: null }))   // update stage
+      .mockReturnValueOnce(deleteChain({ error: null }))   // delete old reviewers
+      .mockReturnValueOnce(insertChain({ error: null }))   // insert new reviewers
 
     const req = new Request('http://localhost', {
       method: 'PATCH',
@@ -164,7 +228,7 @@ describe('PATCH /api/projects/[id]/stages/[stageId]', () => {
 
   it('returns 500 on save error', async () => {
     mockFrom
-      .mockReturnValueOnce(projectChain({ data: PROJECT_ROW, error: null }))
+      .mockReturnValueOnce(stageChain({ data: STAGE_ROW, error: null }))
       .mockReturnValueOnce(updateChain({ error: { message: 'DB fail' } }))
 
     const req = new Request('http://localhost', {
@@ -176,17 +240,19 @@ describe('PATCH /api/projects/[id]/stages/[stageId]', () => {
   })
 
   describe('reviewer check', () => {
-    const STAGE_WITH_REVIEWER = {
-      ...STAGE, status: 'in_progress',
-      reviewers: [{ teamId: 't2', order: 1, checkContent: '確認事項' }],
+    const stageRowWithReviewer = {
+      ...STAGE_ROW,
+      status: 'in_progress',
+      stage_reviewers: [{ stage_id: 's1', team_id: 't2', order: 1, check_content: '確認事項', checked_at: null, note: null }],
     }
-    const ROW_WITH_REVIEWER = { ...PROJECT_ROW, stages: [STAGE_WITH_REVIEWER] }
 
     it('marks reviewer checkedAt when reviewer check submitted', async () => {
       mockFrom
-        .mockReturnValueOnce(projectChain({ data: ROW_WITH_REVIEWER, error: null }))
-        .mockReturnValueOnce(updateChain({ error: null }))
-        .mockReturnValueOnce(teamsChain({ data: [TEAM] })) // getTeams
+        .mockReturnValueOnce(stageChain({ data: stageRowWithReviewer, error: null }))
+        .mockReturnValueOnce(reviewerUpdateChain({ error: null }))  // update stage_reviewers
+        .mockReturnValueOnce(updateChain({ error: null }))           // update stage (allChecked)
+        .mockReturnValueOnce(teamsChain({ data: [TEAM] }))           // getTeams
+        .mockReturnValueOnce(nextStageChain({ data: null, error: null })) // advanceNextStage
 
       const req = new Request('http://localhost', {
         method: 'PATCH',
@@ -202,9 +268,11 @@ describe('PATCH /api/projects/[id]/stages/[stageId]', () => {
 
     it('stage becomes completed when all reviewers done', async () => {
       mockFrom
-        .mockReturnValueOnce(projectChain({ data: ROW_WITH_REVIEWER, error: null }))
+        .mockReturnValueOnce(stageChain({ data: stageRowWithReviewer, error: null }))
+        .mockReturnValueOnce(reviewerUpdateChain({ error: null }))
         .mockReturnValueOnce(updateChain({ error: null }))
-        .mockReturnValueOnce(teamsChain({ data: [TEAM] })) // getTeams
+        .mockReturnValueOnce(teamsChain({ data: [TEAM] }))
+        .mockReturnValueOnce(nextStageChain({ data: null, error: null }))
 
       const req = new Request('http://localhost', {
         method: 'PATCH',
@@ -216,14 +284,16 @@ describe('PATCH /api/projects/[id]/stages/[stageId]', () => {
     })
 
     it('already-checked reviewer cannot be re-checked', async () => {
-      const checkedStage = {
-        ...STAGE_WITH_REVIEWER,
-        reviewers: [{ teamId: 't2', order: 1, checkContent: '', checkedAt: '2025-01-01T00:00:00Z' }],
+      const alreadyCheckedRow = {
+        ...STAGE_ROW,
+        status: 'in_progress',
+        stage_reviewers: [{ stage_id: 's1', team_id: 't2', order: 1, check_content: '', checked_at: '2025-01-01T00:00:00Z', note: '' }],
       }
       mockFrom
-        .mockReturnValueOnce(projectChain({ data: { ...PROJECT_ROW, stages: [checkedStage] }, error: null }))
-        .mockReturnValueOnce(updateChain({ error: null }))
-        .mockReturnValueOnce(teamsChain({ data: [TEAM] }))
+        .mockReturnValueOnce(stageChain({ data: alreadyCheckedRow, error: null }))
+        .mockReturnValueOnce(updateChain({ error: null }))           // update stage (allChecked=true)
+        .mockReturnValueOnce(teamsChain({ data: [TEAM] }))           // getTeams
+        .mockReturnValueOnce(nextStageChain({ data: null, error: null })) // advanceNextStage
 
       const req = new Request('http://localhost', {
         method: 'PATCH',
@@ -231,14 +301,13 @@ describe('PATCH /api/projects/[id]/stages/[stageId]', () => {
       })
       const res = await PATCH(req, params('p1', 's1'))
       const body = await res.json()
-      // checkedAt should remain original value, not be overwritten
       expect(body.stage.reviewers[0].checkedAt).toBe('2025-01-01T00:00:00Z')
     })
 
     it('returns 500 when reviewer check save fails', async () => {
       mockFrom
-        .mockReturnValueOnce(projectChain({ data: ROW_WITH_REVIEWER, error: null }))
-        .mockReturnValueOnce(updateChain({ error: { message: 'save failed' } }))
+        .mockReturnValueOnce(stageChain({ data: stageRowWithReviewer, error: null }))
+        .mockReturnValueOnce(reviewerUpdateChain({ error: { message: 'save failed' } }))
 
       const req = new Request('http://localhost', {
         method: 'PATCH',
@@ -251,28 +320,28 @@ describe('PATCH /api/projects/[id]/stages/[stageId]', () => {
 })
 
 describe('DELETE /api/projects/[id]/stages/[stageId]', () => {
-  beforeEach(() => vi.clearAllMocks())
+  beforeEach(() => vi.resetAllMocks())
 
-  it('returns 404 when project not found', async () => {
-    mockFrom.mockReturnValue(projectChain({ data: null, error: { message: 'not found' } }))
+  it('returns 404 when stage not found', async () => {
+    mockFrom.mockReturnValue(maybeSingleChain({ data: null, error: { message: 'not found' } }))
     const res = await DELETE(new Request('http://localhost'), params('missing', 's1'))
     expect(res.status).toBe(404)
   })
 
   it('deletes stage and returns ok', async () => {
     mockFrom
-      .mockReturnValueOnce(projectChain({ data: PROJECT_ROW, error: null }))
-      .mockReturnValueOnce(updateChain({ error: null }))
+      .mockReturnValueOnce(maybeSingleChain({ data: { name: 'Design Review', project_id: 'p1' }, error: null }))
+      .mockReturnValueOnce(deleteChain({ error: null }))
 
     const res = await DELETE(new Request('http://localhost'), params('p1', 's1'))
     expect(res.status).toBe(200)
     expect(await res.json()).toMatchObject({ ok: true })
   })
 
-  it('returns 500 on save error', async () => {
+  it('returns 500 on delete error', async () => {
     mockFrom
-      .mockReturnValueOnce(projectChain({ data: PROJECT_ROW, error: null }))
-      .mockReturnValueOnce(updateChain({ error: { message: 'fail' } }))
+      .mockReturnValueOnce(maybeSingleChain({ data: { name: 'Design Review', project_id: 'p1' }, error: null }))
+      .mockReturnValueOnce(deleteChain({ error: { message: 'fail' } }))
 
     const res = await DELETE(new Request('http://localhost'), params('p1', 's1'))
     expect(res.status).toBe(500)

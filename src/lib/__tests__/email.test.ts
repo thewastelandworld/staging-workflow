@@ -27,7 +27,7 @@ const stage: Stage = {
 }
 const team: Team = {
   id: 't1', name: 'Design Team', color: '#3b82f6', createdAt: '2024-01-01',
-  members: [{ id: 'm1', name: 'Alice', email: 'alice@example.com', role: 'Lead' }],
+  members: [{ id: 'm1', username: 'alice', name: 'Alice', email: 'alice@example.com', role: 'Lead' }],
 }
 
 describe('sendStageStartEmail', () => {
@@ -87,7 +87,7 @@ describe('sendReviewerEmail', () => {
   const reviewer: StageReviewer = { teamId: 't2', order: 1, checkContent: 'Check quality' }
   const reviewerTeam: Team = {
     id: 't2', name: 'QA Team', color: '#10b981', createdAt: '2024-01-01',
-    members: [{ id: 'm2', name: 'Bob', email: 'bob@example.com' }],
+    members: [{ id: 'm2', username: 'bob', name: 'Bob', email: 'bob@example.com' }],
   }
 
   it('returns success', async () => {

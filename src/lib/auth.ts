@@ -12,7 +12,7 @@ export async function getSession(): Promise<Session | null> {
 
 export async function assertWritable(): Promise<Response | null> {
   const session = await getSession()
-  if (!session || session.role === 'readonly') {
+  if (!session || session.permission === 'readonly') {
     return Response.json({ error: 'Read-only access' }, { status: 403 })
   }
   return null

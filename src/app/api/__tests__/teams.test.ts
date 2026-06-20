@@ -22,7 +22,8 @@ function params(id: string) {
 
 const TEAM_ROW = {
   id: 't1', name: 'Design', color: '#3b82f6',
-  created_at: '2024-01-01', members: [],
+  created_at: '2024-01-01',
+  user_teams: [],
 }
 
 describe('GET /api/teams', () => {
@@ -38,6 +39,7 @@ describe('GET /api/teams', () => {
     expect(res.status).toBe(200)
     const body = await res.json()
     expect(body[0]).toMatchObject({ id: 't1', name: 'Design', color: '#3b82f6' })
+    expect(body[0].members).toEqual([])
   })
 
   it('returns 500 on error', async () => {
@@ -75,7 +77,7 @@ describe('POST /api/teams', () => {
     const body = await res.json()
     expect(body.id).toBe('mock-uuid')
     expect(body.name).toBe('New Team')
-    expect(body.color).toBe('#3b82f6') // first color
+    expect(body.color).toBe('#3b82f6')
     expect(body.members).toEqual([])
   })
 
@@ -141,29 +143,64 @@ describe('DELETE /api/teams/[id]', () => {
 describe('POST /api/teams/[id] (add member)', () => {
   beforeEach(() => vi.clearAllMocks())
 
-  it('adds member and returns 201', async () => {
-    const getQ: Record<string, () => unknown> = {}
-    getQ.select = () => getQ
-    getQ.eq = () => getQ
-    getQ.single = () => Promise.resolve({ data: { ...TEAM_ROW, members: [] }, error: null })
+  it('adds member by username and returns 201', async () => {
+    // 1st call: check team exists
+    const teamQ: Record<string, () => unknown> = {}
+    teamQ.select = () => teamQ
+    teamQ.eq = () => teamQ
+    teamQ.single = () => Promise.resolve({ data: { id: 't1' }, error: null })
 
-    const updateQ: Record<string, () => unknown> = {}
-    updateQ.update = () => updateQ
-    updateQ.eq = () => Promise.resolve({ error: null })
+    // 2nd call: find user by username
+    const userQ: Record<string, () => unknown> = {}
+    userQ.select = () => userQ
+    userQ.eq = () => userQ
+    userQ.maybeSingle = () => Promise.resolve({
+      data: { id: 'user-uuid', username: 'bob', display_name: 'Bob', email: 'bob@example.com' },
+    })
+
+    // 3rd call: insert user_teams
+    const insertQ: Record<string, () => unknown> = {}
+    insertQ.insert = () => Promise.resolve({ error: null })
 
     mockFrom
-      .mockReturnValueOnce(getQ)
-      .mockReturnValueOnce(updateQ)
+      .mockReturnValueOnce(teamQ)
+      .mockReturnValueOnce(userQ)
+      .mockReturnValueOnce(insertQ)
 
     const req = new Request('http://localhost', {
       method: 'POST',
-      body: JSON.stringify({ name: 'Bob', email: 'bob@example.com', role: 'Dev' }),
+      body: JSON.stringify({ username: 'bob', role: 'Dev' }),
     })
     const res = await addMember(req, params('t1'))
     expect(res.status).toBe(201)
     const body = await res.json()
-    expect(body.id).toBe('mock-uuid')
+    expect(body.id).toBe('user-uuid')
+    expect(body.username).toBe('bob')
     expect(body.name).toBe('Bob')
     expect(body.email).toBe('bob@example.com')
+    expect(body.role).toBe('Dev')
+  })
+
+  it('returns 404 when username not found', async () => {
+    const teamQ: Record<string, () => unknown> = {}
+    teamQ.select = () => teamQ
+    teamQ.eq = () => teamQ
+    teamQ.single = () => Promise.resolve({ data: { id: 't1' }, error: null })
+
+    const userQ: Record<string, () => unknown> = {}
+    userQ.select = () => userQ
+    userQ.eq = () => userQ
+    userQ.maybeSingle = () => Promise.resolve({ data: null })
+
+    mockFrom
+      .mockReturnValueOnce(teamQ)
+      .mockReturnValueOnce(userQ)
+
+    const req = new Request('http://localhost', {
+      method: 'POST',
+      body: JSON.stringify({ username: 'nobody', role: '' }),
+    })
+    const res = await addMember(req, params('t1'))
+    expect(res.status).toBe(404)
   })
 })

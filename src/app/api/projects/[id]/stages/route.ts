@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getSupabase } from '@/lib/supabase'
 import { v4 as uuid } from 'uuid'
-import type { Stage } from '@/lib/types'
+import type { Stage, StageReviewer } from '@/lib/types'
 import { revalidateTag } from 'next/cache'
 import { log } from '@/lib/logger'
 import { assertWritable } from '@/lib/auth'
@@ -12,42 +12,69 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const { id } = await params
   const body = await req.json()
 
-  const { data: row, error: fetchErr } = await getSupabase()
+  const { data: project, error: projectErr } = await getSupabase()
     .from('projects')
-    .select('stages')
+    .select('id')
     .eq('id', id)
-    .single()
-  if (fetchErr || !row) {
+    .maybeSingle()
+
+  if (projectErr || !project) {
     log.warn('Project not found when adding stage', { projectId: id })
     return NextResponse.json({ error: 'Not found' }, { status: 404 })
   }
 
-  const stage: Stage = {
+  const { count } = await getSupabase()
+    .from('stages')
+    .select('*', { count: 'exact', head: true })
+    .eq('project_id', id)
+
+  const stageRow = {
     id: uuid(),
-    projectId: id,
-    order: body.order ?? ((row.stages as Stage[]).length + 1),
-    name: body.name,
-    description: body.description ?? '',
-    teamId: body.teamId,
-    deadline: body.deadline,
+    project_id: id,
+    order: body.order ?? ((count ?? 0) + 1),
+    name: body.name as string,
+    description: (body.description as string) ?? '',
+    team_id: body.teamId as string,
+    deadline: body.deadline as string,
     status: 'pending',
-    emailSent: false,
-    reviewers: (body.reviewers ?? []),
+    email_sent: false,
   }
 
-  const stages: Stage[] = [...(row.stages as Stage[]), stage].sort((a, b) => a.order - b.order)
+  const { error: insertErr } = await getSupabase().from('stages').insert(stageRow)
+  if (insertErr) {
+    log.error('Failed to add stage', { projectId: id, stageName: stageRow.name, error: insertErr.message })
+    return NextResponse.json({ error: insertErr.message }, { status: 500 })
+  }
 
-  const { error: updateErr } = await getSupabase()
-    .from('projects')
-    .update({ stages })
-    .eq('id', id)
-  if (updateErr) {
-    log.error('Failed to add stage', { projectId: id, stageName: stage.name, error: updateErr.message })
-    return NextResponse.json({ error: updateErr.message }, { status: 500 })
+  const reviewers: StageReviewer[] = body.reviewers ?? []
+  if (reviewers.length > 0) {
+    const reviewerRows = reviewers.map((r: StageReviewer) => ({
+      stage_id: stageRow.id,
+      team_id: r.teamId,
+      order: r.order,
+      check_content: r.checkContent ?? null,
+    }))
+    const { error: reviewerErr } = await getSupabase().from('stage_reviewers').insert(reviewerRows)
+    if (reviewerErr) {
+      log.error('Failed to add stage reviewers', { projectId: id, stageId: stageRow.id, error: reviewerErr.message })
+    }
   }
 
   revalidateTag('projects', { expire: 0 })
   revalidateTag(`project-${id}`, { expire: 0 })
+
+  const stage: Stage = {
+    id: stageRow.id,
+    projectId: id,
+    order: stageRow.order,
+    name: stageRow.name,
+    description: stageRow.description,
+    teamId: stageRow.team_id,
+    deadline: stageRow.deadline,
+    status: 'pending',
+    emailSent: false,
+    reviewers,
+  }
   log.info('Stage added', { projectId: id, stageId: stage.id, name: stage.name, order: stage.order })
   return NextResponse.json(stage, { status: 201 })
 }

@@ -91,7 +91,7 @@ export default function DashboardPage() {
           <nav className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
             <Link href="/" className="hidden sm:block text-sm font-medium text-blue-600">{t.dashboard}</Link>
             <Link href="/teams" className="text-xs sm:text-sm text-gray-500 hover:text-gray-900 transition-colors">{t.teamManagement}</Link>
-            {!sessionLoading && session?.role === 'admin' && (
+            {!sessionLoading && session?.permission === 'admin' && (
               <Link href="/admin/users" className="text-xs sm:text-sm text-gray-500 hover:text-gray-900 transition-colors">ユーザー管理</Link>
             )}
             <div className="flex items-center gap-0.5 sm:gap-1 text-xs">
@@ -107,8 +107,8 @@ export default function DashboardPage() {
             </button>
             {session && (
               <div className="flex items-center gap-1.5 pl-2 border-l border-gray-200">
-                <span className="hidden sm:block text-xs text-gray-500">{session.user}</span>
-                {session.role === 'readonly' && (
+                <Link href="/profile" className="hidden sm:block text-xs text-gray-500 hover:text-blue-600 transition-colors">{session.displayName ?? session.user}</Link>
+                {session.permission === 'readonly' && (
                   <span className="text-xs bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded font-medium">読取</span>
                 )}
                 <button onClick={logout} className="text-xs text-gray-400 hover:text-red-500 transition-colors">ログアウト</button>
@@ -137,7 +137,7 @@ export default function DashboardPage() {
         {/* Case list header */}
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-base sm:text-lg font-semibold text-gray-900">{t.caseList}</h2>
-          {!sessionLoading && session?.role !== 'readonly' && (
+          {!sessionLoading && session?.permission !== 'readonly' && (
             <button
               onClick={() => setShowForm(!showForm)}
               className="px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition-colors"
@@ -272,7 +272,7 @@ export default function DashboardPage() {
                           {new Date(p.createdAt).toLocaleDateString(dateLocale)}
                         </td>
                         <td className="px-5 py-4 text-right">
-                          {!sessionLoading && session?.role !== 'readonly' && (
+                          {!sessionLoading && session?.permission !== 'readonly' && (
                             <button onClick={() => deleteProject(p.id)}
                               className="text-gray-300 hover:text-red-400 transition-colors text-base">✕</button>
                           )}
@@ -310,7 +310,7 @@ export default function DashboardPage() {
                         className="font-semibold text-gray-900 hover:text-blue-600 transition-colors text-base leading-snug">
                         {p.name}
                       </Link>
-                      {!sessionLoading && session?.role !== 'readonly' && (
+                      {!sessionLoading && session?.permission !== 'readonly' && (
                         <button onClick={() => deleteProject(p.id)}
                           className="text-gray-300 hover:text-red-400 transition-colors text-base flex-shrink-0">✕</button>
                       )}

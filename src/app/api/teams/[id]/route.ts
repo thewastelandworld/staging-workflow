@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server'
 import { getSupabase } from '@/lib/supabase'
-import { v4 as uuid } from 'uuid'
-import type { Member } from '@/lib/types'
 import { toTeam } from '@/lib/mappers'
 import { revalidateTag } from 'next/cache'
 import { log } from '@/lib/logger'
@@ -9,15 +7,7 @@ import { assertWritable } from '@/lib/auth'
 
 type Params = { params: Promise<{ id: string }> }
 
-async function getTeamRow(id: string) {
-  const { data, error } = await getSupabase()
-    .from('teams')
-    .select('*')
-    .eq('id', id)
-    .single()
-  if (error || !data) return null
-  return data
-}
+const MEMBER_SELECT = 'user_teams(role, users(id, username, display_name, email))'
 
 export async function PATCH(req: Request, { params }: Params) {
   const deny = await assertWritable()
@@ -26,11 +16,9 @@ export async function PATCH(req: Request, { params }: Params) {
   const body = await req.json()
   const { data, error } = await getSupabase()
     .from('teams')
-    .update(body.members !== undefined
-      ? { members: body.members }
-      : { name: body.name, color: body.color })
+    .update({ name: body.name, color: body.color })
     .eq('id', id)
-    .select()
+    .select(`*, ${MEMBER_SELECT}`)
     .single()
   if (error || !data) {
     log.error('Failed to update team', { id, error: error?.message })
@@ -45,6 +33,7 @@ export async function DELETE(_req: Request, { params }: Params) {
   const deny = await assertWritable()
   if (deny) return deny
   const { id } = await params
+  // user_teams entries are removed automatically via ON DELETE CASCADE
   const { error } = await getSupabase().from('teams').delete().eq('id', id)
   if (error) {
     log.error('Failed to delete team', { id, error: error.message })
@@ -55,35 +44,47 @@ export async function DELETE(_req: Request, { params }: Params) {
   return NextResponse.json({ ok: true })
 }
 
+// Add a member to a team by username
 export async function POST(req: Request, { params }: Params) {
   const deny = await assertWritable()
   if (deny) return deny
   const { id } = await params
   const body = await req.json()
 
-  const row = await getTeamRow(id)
-  if (!row) {
+  const { data: teamRow } = await getSupabase()
+    .from('teams')
+    .select('id')
+    .eq('id', id)
+    .single()
+  if (!teamRow) {
     log.warn('Team not found when adding member', { teamId: id })
     return NextResponse.json({ error: 'Not found' }, { status: 404 })
   }
 
-  const member: Member = {
-    id: uuid(),
-    name: body.name as string,
-    email: body.email as string,
-    role: (body.role as string) ?? '',
+  const { data: user } = await getSupabase()
+    .from('users')
+    .select('id, username, display_name, email')
+    .eq('username', body.username as string)
+    .maybeSingle()
+  if (!user) {
+    return NextResponse.json({ error: 'ユーザーが見つかりません' }, { status: 404 })
   }
-  const members: Member[] = [...((row.members as Member[]) ?? []), member]
 
   const { error } = await getSupabase()
-    .from('teams')
-    .update({ members })
-    .eq('id', id)
+    .from('user_teams')
+    .insert({ user_id: user.id, team_id: id, role: (body.role as string) || null })
   if (error) {
-    log.error('Failed to add member', { teamId: id, memberName: member.name, error: error.message })
+    log.error('Failed to add member', { teamId: id, username: body.username, error: error.message })
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
+
   revalidateTag('teams', { expire: 0 })
-  log.info('Member added', { teamId: id, memberId: member.id, name: member.name })
-  return NextResponse.json(member, { status: 201 })
+  log.info('Member added', { teamId: id, username: user.username })
+  return NextResponse.json({
+    id: user.id,
+    username: user.username,
+    name: user.display_name ?? user.username,
+    email: user.email ?? '',
+    role: (body.role as string) || undefined,
+  }, { status: 201 })
 }

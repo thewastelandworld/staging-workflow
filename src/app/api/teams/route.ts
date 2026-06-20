@@ -6,13 +6,15 @@ import { cacheLife, cacheTag, revalidateTag } from 'next/cache'
 import { log } from '@/lib/logger'
 import { assertWritable } from '@/lib/auth'
 
+const MEMBER_SELECT = 'user_teams(role, users(id, username, display_name, email))'
+
 async function fetchTeams() {
   'use cache'
-  cacheLife('hours')
+  cacheLife('minutes')
   cacheTag('teams')
   const { data, error } = await getSupabase()
     .from('teams')
-    .select('*')
+    .select(`*, ${MEMBER_SELECT}`)
     .order('created_at', { ascending: true })
   if (error) throw new Error(error.message)
   return (data ?? []).map(toTeam)
@@ -39,7 +41,6 @@ export async function POST(req: Request) {
     name: body.name as string,
     color: (body.color as string) ?? COLORS[(existing?.length ?? 0) % COLORS.length],
     created_at: new Date().toISOString(),
-    members: [],
   }
   const { error } = await getSupabase().from('teams').insert(team)
   if (error) {

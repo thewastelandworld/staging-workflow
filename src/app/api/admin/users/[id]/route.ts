@@ -3,14 +3,14 @@ import { getSupabase } from '@/lib/supabase'
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await getSession()
-  if (!session || session.role !== 'admin') {
+  if (!session || session.permission !== 'admin') {
     return Response.json({ error: 'Forbidden' }, { status: 403 })
   }
 
   const { id } = await params
-  const { role } = await req.json()
-  if (role !== 'user' && role !== 'readonly') {
-    return Response.json({ error: 'Invalid role' }, { status: 400 })
+  const { permission } = await req.json()
+  if (permission !== 'user' && permission !== 'readonly') {
+    return Response.json({ error: 'Invalid permission' }, { status: 400 })
   }
 
   const supabase = getSupabase()
@@ -25,7 +25,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     return Response.json({ error: '自分の権限は変更できません' }, { status: 400 })
   }
 
-  const { error } = await supabase.from('users').update({ role }).eq('id', id)
+  const { error } = await supabase.from('users').update({ permission }).eq('id', id)
   if (error) {
     const msg = process.env.NODE_ENV === 'development' ? error.message : 'DB error'
     return Response.json({ error: msg }, { status: 500 })
@@ -36,7 +36,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await getSession()
-  if (!session || session.role !== 'admin') {
+  if (!session || session.permission !== 'admin') {
     return Response.json({ error: 'Forbidden' }, { status: 403 })
   }
 

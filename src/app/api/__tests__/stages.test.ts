@@ -19,33 +19,38 @@ function params(id: string) {
   return { params: Promise.resolve({ id }) }
 }
 
-function getChain(result: unknown) {
+// .from('projects').select('id').eq().maybeSingle()
+function projectExistsChain(result: unknown) {
   const q: Record<string, () => unknown> = {}
   q.select = () => q
   q.eq = () => q
-  q.single = () => Promise.resolve(result)
+  q.maybeSingle = () => Promise.resolve(result)
   return q
 }
 
-function updateChain(result: unknown) {
+// .from('stages').select('*', {count,head}).eq() → returns count
+function countChain(result: unknown) {
   const q: Record<string, () => unknown> = {}
-  q.update = () => q
+  q.select = () => q
   q.eq = () => Promise.resolve(result)
   return q
 }
 
-const EXISTING_STAGE = {
-  id: 'existing-1', projectId: 'p1', order: 1, name: 'First Stage',
-  teamId: 't1', deadline: '2025-12-01T00:00:00Z', status: 'pending', emailSent: false,
+// .from('stages').insert() or .from('stage_reviewers').insert()
+function insertChain(result: unknown) {
+  const q: Record<string, () => unknown> = {}
+  q.insert = () => Promise.resolve(result)
+  return q
 }
 
 describe('POST /api/projects/[id]/stages', () => {
-  beforeEach(() => vi.clearAllMocks())
+  beforeEach(() => vi.resetAllMocks())
 
   it('creates a stage and returns 201', async () => {
     mockFrom
-      .mockReturnValueOnce(getChain({ data: { stages: [] }, error: null }))
-      .mockReturnValueOnce(updateChain({ error: null }))
+      .mockReturnValueOnce(projectExistsChain({ data: { id: 'p1' }, error: null }))
+      .mockReturnValueOnce(countChain({ count: 0, error: null }))
+      .mockReturnValueOnce(insertChain({ error: null }))
 
     const req = new Request('http://localhost', {
       method: 'POST',
@@ -67,8 +72,9 @@ describe('POST /api/projects/[id]/stages', () => {
 
   it('auto-assigns order based on existing stages when not provided', async () => {
     mockFrom
-      .mockReturnValueOnce(getChain({ data: { stages: [EXISTING_STAGE] }, error: null }))
-      .mockReturnValueOnce(updateChain({ error: null }))
+      .mockReturnValueOnce(projectExistsChain({ data: { id: 'p1' }, error: null }))
+      .mockReturnValueOnce(countChain({ count: 1, error: null }))
+      .mockReturnValueOnce(insertChain({ error: null }))
 
     const req = new Request('http://localhost', {
       method: 'POST',
@@ -76,13 +82,15 @@ describe('POST /api/projects/[id]/stages', () => {
     })
     const res = await POST(req, params('p1'))
     const body = await res.json()
-    expect(body.order).toBe(2) // existing has 1 stage → length + 1 = 2
+    expect(body.order).toBe(2) // count=1 → count + 1 = 2
   })
 
   it('includes reviewers when provided', async () => {
     mockFrom
-      .mockReturnValueOnce(getChain({ data: { stages: [] }, error: null }))
-      .mockReturnValueOnce(updateChain({ error: null }))
+      .mockReturnValueOnce(projectExistsChain({ data: { id: 'p1' }, error: null }))
+      .mockReturnValueOnce(countChain({ count: 0, error: null }))
+      .mockReturnValueOnce(insertChain({ error: null }))
+      .mockReturnValueOnce(insertChain({ error: null })) // stage_reviewers insert
 
     const reviewers = [{ teamId: 't2', order: 1, checkContent: '確認内容' }]
     const req = new Request('http://localhost', {
@@ -98,8 +106,9 @@ describe('POST /api/projects/[id]/stages', () => {
 
   it('defaults description to empty string when omitted', async () => {
     mockFrom
-      .mockReturnValueOnce(getChain({ data: { stages: [] }, error: null }))
-      .mockReturnValueOnce(updateChain({ error: null }))
+      .mockReturnValueOnce(projectExistsChain({ data: { id: 'p1' }, error: null }))
+      .mockReturnValueOnce(countChain({ count: 0, error: null }))
+      .mockReturnValueOnce(insertChain({ error: null }))
 
     const req = new Request('http://localhost', {
       method: 'POST',
@@ -111,7 +120,7 @@ describe('POST /api/projects/[id]/stages', () => {
   })
 
   it('returns 404 when project not found', async () => {
-    mockFrom.mockReturnValueOnce(getChain({ data: null, error: { message: 'not found' } }))
+    mockFrom.mockReturnValueOnce(projectExistsChain({ data: null, error: { message: 'not found' } }))
 
     const req = new Request('http://localhost', {
       method: 'POST',
@@ -123,8 +132,9 @@ describe('POST /api/projects/[id]/stages', () => {
 
   it('returns 500 on save error', async () => {
     mockFrom
-      .mockReturnValueOnce(getChain({ data: { stages: [] }, error: null }))
-      .mockReturnValueOnce(updateChain({ error: { message: 'DB error' } }))
+      .mockReturnValueOnce(projectExistsChain({ data: { id: 'p1' }, error: null }))
+      .mockReturnValueOnce(countChain({ count: 0, error: null }))
+      .mockReturnValueOnce(insertChain({ error: { message: 'DB error' } }))
 
     const req = new Request('http://localhost', {
       method: 'POST',
