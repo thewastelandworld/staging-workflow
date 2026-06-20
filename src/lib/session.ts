@@ -48,7 +48,13 @@ export async function verifySession(token: string): Promise<Session | null> {
       new TextEncoder().encode(data)
     )
     if (!valid) return null
-    const payload: Session = JSON.parse(atob(data))
+    const raw = JSON.parse(atob(data)) as Record<string, unknown>
+    // 旧トークンは `role` フィールドを使っていたため、移行期間中は両方を許容する
+    const payload: Session = {
+      user: raw.user as string,
+      permission: ((raw.permission ?? raw.role) as Permission),
+      exp: raw.exp as number,
+    }
     if (payload.exp < Date.now()) return null
     return payload
   } catch {
