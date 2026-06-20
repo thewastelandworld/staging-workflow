@@ -24,7 +24,7 @@ export async function GET(req: Request) {
   }
 
   const overdue = (rows ?? []).map((row) => ({
-    project: (row.projects as { name: string } | null)?.name ?? '',
+    project: (row.projects as unknown as { name: string } | null)?.name ?? '',
     projectId: row.project_id as string,
     stage: row.name as string,
     deadline: row.deadline as string,
