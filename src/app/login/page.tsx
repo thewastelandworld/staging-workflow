@@ -81,7 +81,7 @@ function LoginForm() {
           </button>
 
           <p className="text-xs text-center text-gray-400">
-            読み取り専用: demo / demo
+            使用者: demo / demo
           </p>
 
           <p className="text-xs text-center text-gray-400">

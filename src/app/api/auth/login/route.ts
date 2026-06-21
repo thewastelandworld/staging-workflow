@@ -33,7 +33,7 @@ export async function POST(req: Request) {
     if (username === adminUser && password === adminPass) {
       permission = 'admin'
     } else if (username === 'demo' && password === 'demo') {
-      permission = 'readonly'
+      permission = 'user'
     }
   }
 
