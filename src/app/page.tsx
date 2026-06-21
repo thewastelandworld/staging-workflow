@@ -20,6 +20,8 @@ export default function DashboardPage() {
   const [newDesc, setNewDesc] = useState('')
   const [creating, setCreating] = useState(false)
   const [showForm, setShowForm] = useState(false)
+  const [importing, setImporting] = useState(false)
+  const [importError, setImportError] = useState<string | null>(null)
 
   async function load() {
     const [pRes, tmRes] = await Promise.all([
@@ -52,6 +54,24 @@ export default function DashboardPage() {
     setShowForm(false)
     setCreating(false)
     load()
+  }
+
+  async function importExcel(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    e.target.value = ''
+    setImporting(true)
+    setImportError(null)
+    const fd = new FormData()
+    fd.append('file', file)
+    const res = await fetch('/api/projects/import', { method: 'POST', body: fd })
+    const data = await res.json()
+    setImporting(false)
+    if (!res.ok) {
+      setImportError(data.error ?? 'インポートに失敗しました')
+    } else {
+      await load()
+    }
   }
 
   async function deleteProject(id: string) {
@@ -138,14 +158,28 @@ export default function DashboardPage() {
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-base sm:text-lg font-semibold text-gray-900">{t.caseList}</h2>
           {!sessionLoading && session?.permission !== 'readonly' && (
-            <button
-              onClick={() => setShowForm(!showForm)}
-              className="px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition-colors"
-            >
-              {t.newCase}
-            </button>
+            <div className="flex items-center gap-2">
+              <label className={`px-3 sm:px-4 py-2 rounded-lg text-sm border border-blue-300 text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer ${importing ? 'opacity-50 pointer-events-none' : ''}`}>
+                {importing ? 'インポート中...' : 'Excelインポート'}
+                <input type="file" accept=".xlsx,.xls" className="hidden" onChange={importExcel} disabled={importing} />
+              </label>
+              <button
+                onClick={() => setShowForm(!showForm)}
+                className="px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition-colors"
+              >
+                {t.newCase}
+              </button>
+            </div>
           )}
         </div>
+
+        {/* Import error */}
+        {importError && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center justify-between">
+            <span className="text-sm text-red-700">{importError}</span>
+            <button onClick={() => setImportError(null)} className="text-red-400 hover:text-red-600 text-lg leading-none ml-3">✕</button>
+          </div>
+        )}
 
         {/* Create form */}
         {showForm && (
