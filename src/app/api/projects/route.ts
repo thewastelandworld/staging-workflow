@@ -72,7 +72,6 @@ export async function POST(req: Request) {
     description: (body.description as string) ?? '',
     created_at: new Date().toISOString(),
     created_by: session?.user ?? null,
-    stages: [],
   }
   const { error } = await getSupabase().from('projects').insert(project)
   if (error) {
