@@ -31,19 +31,19 @@ type ParsedStage = {
   deadline: string
 }
 
-function parseTemplate(rows: unknown[][]): { projectName: string; description: string; stages: ParsedStage[] } {
+function parseTemplate(rows: unknown[][], headerRowIdx: number): { projectName: string; description: string; stages: ParsedStage[] } {
   // Template format:
-  //   Row 1 (idx 0): B(idx 1) = project title
-  //   Row 2 (idx 1): B(idx 1) = description
-  //   Row 4 (idx 3): headers
-  //   Row 5+ (idx 4+): [#, name, desc, team, reviewer, status] at cols B-G (idx 1-6)
+  //   rows[0]: B(idx 1) = project title
+  //   rows[1]: B(idx 1) = description
+  //   headerRowIdx: header row (contains 'ステージ')
+  //   headerRowIdx+1 onwards: stage data at cols B-G (idx 1-6)
   const projectName = String(rows[0]?.[1] ?? '').trim()
   const description = String(rows[1]?.[1] ?? '').trim()
 
   const defaultDeadline = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
 
   const stages: ParsedStage[] = rows
-    .slice(4)
+    .slice(headerRowIdx + 1)
     .filter((r) => String(r[2] ?? '').trim())
     .map((r) => ({
       name: String(r[2]).trim(),
@@ -131,13 +131,16 @@ export async function POST(req: Request) {
     return Response.json({ error: 'データが見つかりません' }, { status: 400 })
   }
 
-  // Detect format: if B1 has content and row 4 looks like headers → template format
-  const isTemplate = String(rows[0]?.[1] ?? '').trim().length > 0 &&
-    String(rows[3]?.[2] ?? '').includes('ステージ')
+  // Find the header row dynamically (the row that contains 'ステージ')
+  // xlsx skips completely empty rows, so we cannot rely on fixed row indices
+  const headerRowIdx = rows.findIndex((r) =>
+    r.some((cell) => String(cell).includes('ステージ'))
+  )
+  const isTemplate = String(rows[0]?.[1] ?? '').trim().length > 0 && headerRowIdx !== -1
 
   let parsed: { projectName: string; description: string; stages: ParsedStage[] }
   try {
-    parsed = isTemplate ? parseTemplate(rows) : parseSimple(rows)
+    parsed = isTemplate ? parseTemplate(rows, headerRowIdx) : parseSimple(rows)
   } catch (e) {
     return Response.json({ error: String(e) }, { status: 400 })
   }
