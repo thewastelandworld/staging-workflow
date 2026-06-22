@@ -12,6 +12,7 @@ type ParsedStage = {
   description: string
   teamName: string
   reviewerTeamName: string
+  reviewerCheckContent: string
   deadline: string
 }
 
@@ -43,6 +44,7 @@ function parseTemplateSheet(rows: unknown[][]): ParsedProject {
       description: String(r[2] ?? '').trim(),
       teamName: String(r[3] ?? '').trim(),
       reviewerTeamName: String(r[4] ?? '').trim(),
+      reviewerCheckContent: '',
       deadline,
     }))
 
@@ -72,11 +74,12 @@ function parsePerSheet(sheetName: string, rows: unknown[][]): ParsedProject {
     return -1
   }
 
-  const nameCol     = colOf('ステージ名', '名前', 'stage', 'name')
-  const descCol     = colOf('説明', 'description', '内容')
-  const teamCol     = colOf('担当チーム', '担当', 'team')
-  const reviewerCol = colOf('確認チーム', '確認', 'reviewer')
-  const deadlineCol = colOf('期限', 'deadline', '締切')
+  const nameCol         = colOf('ステージ名', '名前', 'stage', 'name')
+  const descCol         = colOf('説明', 'description')           // '内容' alone would match '確認内容'
+  const teamCol         = colOf('担当チーム', '担当', 'team')
+  const reviewerCol     = colOf('確認チーム', 'reviewer')
+  const checkContentCol = colOf('確認内容', 'check_content', 'check content')
+  const deadlineCol     = colOf('期限', 'deadline', '締切')
 
   if (nameCol === -1) throw new Error(`シート「${sheetName}」に「ステージ名」列が見つかりません`)
 
@@ -89,6 +92,7 @@ function parsePerSheet(sheetName: string, rows: unknown[][]): ParsedProject {
       description: descCol !== -1 ? String(r[descCol] ?? '').trim() : '',
       teamName: teamCol !== -1 ? String(r[teamCol] ?? '').trim() : '',
       reviewerTeamName: reviewerCol !== -1 ? String(r[reviewerCol] ?? '').trim() : '',
+      reviewerCheckContent: checkContentCol !== -1 ? String(r[checkContentCol] ?? '').trim() : '',
       deadline: deadlineCol !== -1 && r[deadlineCol]
         ? (() => { try { return new Date(String(r[deadlineCol])).toISOString() } catch { return deadline } })()
         : deadline,
@@ -159,7 +163,7 @@ async function createProject(
         stage_id: stageId,
         team_id: reviewerId,
         order: 1,
-        check_content: '確認完了',
+        check_content: s.reviewerCheckContent || null,
         checked_at: null,
         note: null,
       })
