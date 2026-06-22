@@ -76,7 +76,8 @@ export async function POST(req: Request) {
     const { data: newUser, error: insertError } = await supabase.from('users').insert({
       username,
       password_hash,
-      permission: 'readonly',
+      permission: 'user',
+      status: 'pending',
       display_name: (typeof displayName === 'string' && displayName.trim()) ? displayName.trim() : null,
       email: email.trim(),
     }).select('id').single()

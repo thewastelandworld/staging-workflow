@@ -10,12 +10,14 @@ function LoginForm() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [pending, setPending] = useState(false)
   const [loading, setLoading] = useState(false)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
     setError('')
+    setPending(false)
     try {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
@@ -23,7 +25,12 @@ function LoginForm() {
         body: JSON.stringify({ username, password }),
       })
       if (!res.ok) {
-        setError('ユーザー名またはパスワードが違います')
+        const data = await res.json().catch(() => ({}))
+        if (data.pending) {
+          setPending(true)
+        } else {
+          setError('ユーザー名またはパスワードが違います')
+        }
         return
       }
       const next = searchParams.get('next') ?? '/'
@@ -68,6 +75,12 @@ function LoginForm() {
             />
           </div>
 
+          {pending && (
+            <div className="text-sm text-yellow-800 bg-yellow-50 border border-yellow-200 px-3 py-2 rounded-lg">
+              管理者の承認をお待ちください。<br />
+              承認が完了するとログインできます。
+            </div>
+          )}
           {error && (
             <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</p>
           )}

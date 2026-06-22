@@ -91,6 +91,11 @@ CREATE TABLE IF NOT EXISTS users (
 --   ALTER TABLE users ADD COLUMN IF NOT EXISTS display_name TEXT;
 --   ALTER TABLE users ADD COLUMN IF NOT EXISTS email TEXT;
 
+-- Migration: add status column for admin approval workflow (run once in Supabase SQL Editor)
+--
+--   ALTER TABLE users ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'approved';
+--   -- Existing users are already approved; new registrations will be set to 'pending' by the API.
+
 -- Migration: add created_by to projects (run once in Supabase SQL Editor)
 --
 --   ALTER TABLE projects ADD COLUMN IF NOT EXISTS created_by TEXT;

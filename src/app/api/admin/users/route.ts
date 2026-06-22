@@ -11,7 +11,7 @@ export async function GET() {
     const supabase = getSupabase()
     const { data, error } = await supabase
       .from('users')
-      .select('id, username, permission, display_name, email')
+      .select('id, username, permission, display_name, email, status')
       .order('username', { ascending: true })
 
     if (error) {

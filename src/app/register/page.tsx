@@ -136,13 +136,17 @@ export default function RegisterPage() {
 
         {done ? (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 text-center space-y-4">
-            <p className="text-green-600 font-medium">登録が完了しました</p>
-            <p className="text-sm text-gray-500">ログインページからサインインしてください。</p>
+            <div className="text-3xl">✅</div>
+            <p className="text-gray-900 font-semibold">登録が完了しました</p>
+            <div className="px-4 py-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800">
+              管理者の承認をお待ちください。<br />
+              承認が完了するとログインできます。
+            </div>
             <Link
               href="/login"
-              className="block w-full py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors text-center"
+              className="block w-full py-2.5 bg-gray-100 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors text-center"
             >
-              ログインへ
+              ログインページへ
             </Link>
           </div>
         ) : (

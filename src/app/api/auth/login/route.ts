@@ -14,13 +14,18 @@ export async function POST(req: Request) {
     const supabase = getSupabase()
     const { data: user } = await supabase
       .from('users')
-      .select('password_hash, permission')
+      .select('password_hash, permission, status')
       .eq('username', username)
       .single()
 
     if (user) {
       const valid = await verifyPassword(password, user.password_hash)
-      if (valid) permission = user.permission as Permission
+      if (valid) {
+        if (user.status === 'pending') {
+          return Response.json({ error: '管理者の承認をお待ちください', pending: true }, { status: 403 })
+        }
+        permission = user.permission as Permission
+      }
     }
   } catch {
     // Supabase unavailable — fall through to hardcoded credentials

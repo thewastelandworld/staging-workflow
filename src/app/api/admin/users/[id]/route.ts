@@ -8,29 +8,31 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   }
 
   const { id } = await params
-  const { permission } = await req.json()
-  if (permission !== 'user' && permission !== 'readonly') {
-    return Response.json({ error: 'Invalid permission' }, { status: 400 })
-  }
+  const body = await req.json()
 
   const supabase = getSupabase()
-
-  const { data: target } = await supabase
-    .from('users')
-    .select('username')
-    .eq('id', id)
-    .single()
+  const { data: target } = await supabase.from('users').select('username').eq('id', id).single()
 
   if (target?.username === session.user) {
     return Response.json({ error: '自分の権限は変更できません' }, { status: 400 })
   }
 
-  const { error } = await supabase.from('users').update({ permission }).eq('id', id)
-  if (error) {
-    const msg = process.env.NODE_ENV === 'development' ? error.message : 'DB error'
-    return Response.json({ error: msg }, { status: 500 })
+  // Approve pending user
+  if (body.approve === true) {
+    const { error } = await supabase.from('users').update({ status: 'approved' }).eq('id', id)
+    if (error) return Response.json({ error: error.message }, { status: 500 })
+    return Response.json({ ok: true })
   }
 
+  // Change permission
+  const { permission } = body
+  if (permission !== 'user' && permission !== 'readonly') {
+    return Response.json({ error: 'Invalid permission' }, { status: 400 })
+  }
+  const { error } = await supabase.from('users').update({ permission }).eq('id', id)
+  if (error) {
+    return Response.json({ error: process.env.NODE_ENV === 'development' ? error.message : 'DB error' }, { status: 500 })
+  }
   return Response.json({ ok: true })
 }
 
