@@ -25,6 +25,8 @@ function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const { t, locale, setLocale } = useLanguage()
   const { session, loading: sessionLoading, logout } = useSession()
   const isReadOnly = !sessionLoading && session?.permission === 'readonly'
+  const isAdmin = !sessionLoading && session?.permission === 'admin'
+  const userTeamIds = session?.teamIds ?? []
   const [project, setProject] = useState<Project | null>(null)
   const [teams, setTeams] = useState<Team[]>([])
   const [loading, setLoading] = useState(true)
@@ -250,7 +252,7 @@ function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 sm:p-6">
           <div className="flex items-center justify-between mb-4 sm:mb-6">
             <h2 className="font-semibold text-gray-900">{t.stageTimeline}</h2>
-            {!isReadOnly && (
+            {isAdmin && (
               <BulkCheckContentEditor
                 projectId={project.id}
                 stages={project.stages}
@@ -273,9 +275,11 @@ function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
                 teams={teams}
                 onStageUpdate={handleStageUpdate}
                 onStageDelete={handleStageDelete}
+                isAdmin={isAdmin}
                 isReadOnly={isReadOnly}
+                userTeamIds={userTeamIds}
               />
-              {!isReadOnly && (
+              {!isReadOnly && (isAdmin || project.createdBy === session?.user) && (
                 <AddStageForm
                   projectId={project.id}
                   teams={teams}

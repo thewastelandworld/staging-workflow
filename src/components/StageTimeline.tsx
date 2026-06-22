@@ -10,7 +10,9 @@ interface Props {
   teams: Team[]
   onStageUpdate: (stageId: string, data: Partial<Stage>) => Promise<void>
   onStageDelete: (stageId: string) => Promise<void>
-  isReadOnly?: boolean
+  isAdmin: boolean
+  isReadOnly: boolean
+  userTeamIds: string[]
 }
 
 interface EditForm {
@@ -52,7 +54,7 @@ function toDatetimeLocal(iso: string) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
-export default function StageTimeline({ project, teams, onStageUpdate, onStageDelete, isReadOnly = false }: Props) {
+export default function StageTimeline({ project, teams, onStageUpdate, onStageDelete, isAdmin, isReadOnly, userTeamIds }: Props) {
   const { t } = useLanguage()
   const [loadingId, setLoadingId] = useState<string | null>(null)
   const [checkingKey, setCheckingKey] = useState<string | null>(null)
@@ -209,6 +211,10 @@ export default function StageTimeline({ project, teams, onStageUpdate, onStageDe
             const isActive = loadingId === stage.id
             const isEditing = editingId === stage.id
 
+            // Per-stage role flags
+            const isResponsible = isAdmin || userTeamIds.includes(stage.teamId)
+            const isReviewer = isAdmin || (stage.reviewers?.some((r) => userTeamIds.includes(r.teamId)) ?? false)
+
             const hasProblem = !!stage.problem && status !== 'completed'
 
             const cardBorder =
@@ -334,7 +340,7 @@ export default function StageTimeline({ project, teams, onStageUpdate, onStageDe
                         <div className="flex items-center gap-2 flex-wrap">
                           <h3 className="font-semibold text-gray-900">{stage.name}</h3>
                           <StageStatusBadge status={status} />
-                          {!isReadOnly && status !== 'completed' && !stage.problem && problemEditId !== stage.id && (
+                          {!isReadOnly && isReviewer && status !== 'completed' && !stage.problem && problemEditId !== stage.id && (
                             <button
                               onClick={() => openProblemEdit(stage)}
                               className="text-xs px-2 py-0.5 bg-red-50 text-red-600 border border-red-300 rounded-full hover:bg-red-100 transition-colors"
@@ -348,7 +354,7 @@ export default function StageTimeline({ project, teams, onStageUpdate, onStageDe
                             </span>
                           )}
                         </div>
-                        {!isReadOnly && (
+                        {!isReadOnly && isResponsible && (
                           <div className="flex items-center gap-2">
                             {(status === 'completed' || stage.status === 'reviewing') && (
                               <button onClick={() => handleRestart(stage)} disabled={isActive}
@@ -380,7 +386,7 @@ export default function StageTimeline({ project, teams, onStageUpdate, onStageDe
                               <span className="text-xs font-semibold text-red-700">{t.problemLabel}</span>
                               <p className="text-sm text-red-800 mt-0.5 whitespace-pre-wrap">{stage.problem}</p>
                             </div>
-                            {!isReadOnly && status !== 'completed' && (
+                            {!isReadOnly && isReviewer && status !== 'completed' && (
                               <div className="flex flex-col gap-1 flex-shrink-0">
                                 <button
                                   onClick={() => openProblemEdit(stage)}
@@ -401,7 +407,7 @@ export default function StageTimeline({ project, teams, onStageUpdate, onStageDe
                       )}
 
                       {/* Problem edit form */}
-                      {!isReadOnly && problemEditId === stage.id && (
+                      {!isReadOnly && isReviewer && problemEditId === stage.id && (
                         <div className="mt-2 p-3 bg-red-50 border border-red-300 rounded-lg space-y-2">
                           <span className="text-xs font-semibold text-red-700">{t.problemLabel}</span>
                           <textarea
@@ -500,7 +506,7 @@ export default function StageTimeline({ project, teams, onStageUpdate, onStageDe
                                       <span className="font-medium text-green-700">{t.reviewNoteLabel}: </span>{reviewer.note}
                                     </div>
                                   )}
-                                  {!isReadOnly && isActiveReviewer && stage.status === 'reviewing' && (
+                                  {!isReadOnly && isActiveReviewer && stage.status === 'reviewing' && (isAdmin || userTeamIds.includes(reviewer.teamId)) && (
                                     <div className="ml-6 space-y-1.5">
                                       {reviewer.checkContent && (
                                         <div className="px-2 py-1.5 bg-blue-50 border border-blue-100 rounded text-xs text-blue-800 whitespace-pre-wrap">
@@ -529,7 +535,7 @@ export default function StageTimeline({ project, teams, onStageUpdate, onStageDe
                         </div>
                       )}
 
-                      {!isReadOnly && (status === 'pending' || status === 'in_progress' || (status === 'overdue' && stage.status !== 'reviewing')) && (
+                      {!isReadOnly && isResponsible && (status === 'pending' || status === 'in_progress' || (status === 'overdue' && stage.status !== 'reviewing')) && (
                         <div className="mt-3 flex gap-2 flex-wrap">
                           {status === 'pending' && (
                             <button onClick={() => handleStart(stage)} disabled={isActive}

@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react'
 
 type Permission = 'admin' | 'user' | 'readonly'
-interface SessionState { user: string; permission: Permission; displayName: string | null; email: string | null }
+interface SessionState { user: string; permission: Permission; displayName: string | null; email: string | null; teamIds: string[] }
 
 const SessionContext = createContext<{
   session: SessionState | null
@@ -19,7 +19,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     fetch('/api/auth/me')
       .then(r => r.ok ? r.json() : null)
       .then(data => {
-        setSession(data ? { user: data.user, permission: data.permission, displayName: data.displayName ?? null, email: data.email ?? null } : null)
+        setSession(data ? { user: data.user, permission: data.permission, displayName: data.displayName ?? null, email: data.email ?? null, teamIds: data.teamIds ?? [] } : null)
         setLoading(false)
       })
       .catch(() => setLoading(false))

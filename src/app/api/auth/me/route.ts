@@ -10,21 +10,27 @@ export async function GET() {
 
   let displayName: string | null = null
   let email: string | null = null
+  let teamIds: string[] = []
   try {
     const { data } = await getSupabase()
       .from('users')
-      .select('display_name, email')
+      .select('id, display_name, email')
       .eq('username', session.user)
       .maybeSingle()
     if (data) {
       displayName = data.display_name ?? null
       email = data.email ?? null
+      const { data: ut } = await getSupabase()
+        .from('user_teams')
+        .select('team_id')
+        .eq('user_id', data.id)
+      teamIds = (ut ?? []).map((r) => r.team_id as string)
     }
   } catch {
     // hardcoded users (admin/demo) don't exist in DB
   }
 
-  return Response.json({ user: session.user, permission: session.permission, displayName, email })
+  return Response.json({ user: session.user, permission: session.permission, displayName, email, teamIds })
 }
 
 export async function PATCH(req: Request) {
