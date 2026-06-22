@@ -279,7 +279,7 @@ function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
                 isReadOnly={isReadOnly}
                 userTeamIds={userTeamIds}
               />
-              {!isReadOnly && (isAdmin || project.createdBy === session?.user) && (
+              {!isReadOnly && (isAdmin || project.createdBy === session?.user || project.stages.some((s) => userTeamIds.includes(s.teamId))) && (
                 <AddStageForm
                   projectId={project.id}
                   teams={teams}

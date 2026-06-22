@@ -340,7 +340,7 @@ export default function StageTimeline({ project, teams, onStageUpdate, onStageDe
                         <div className="flex items-center gap-2 flex-wrap">
                           <h3 className="font-semibold text-gray-900">{stage.name}</h3>
                           <StageStatusBadge status={status} />
-                          {!isReadOnly && isReviewer && status !== 'completed' && !stage.problem && problemEditId !== stage.id && (
+                          {!isReadOnly && (isResponsible || isReviewer) && status !== 'completed' && !stage.problem && problemEditId !== stage.id && (
                             <button
                               onClick={() => openProblemEdit(stage)}
                               className="text-xs px-2 py-0.5 bg-red-50 text-red-600 border border-red-300 rounded-full hover:bg-red-100 transition-colors"
@@ -386,7 +386,7 @@ export default function StageTimeline({ project, teams, onStageUpdate, onStageDe
                               <span className="text-xs font-semibold text-red-700">{t.problemLabel}</span>
                               <p className="text-sm text-red-800 mt-0.5 whitespace-pre-wrap">{stage.problem}</p>
                             </div>
-                            {!isReadOnly && isReviewer && status !== 'completed' && (
+                            {!isReadOnly && (isResponsible || isReviewer) && status !== 'completed' && (
                               <div className="flex flex-col gap-1 flex-shrink-0">
                                 <button
                                   onClick={() => openProblemEdit(stage)}
@@ -407,7 +407,7 @@ export default function StageTimeline({ project, teams, onStageUpdate, onStageDe
                       )}
 
                       {/* Problem edit form */}
-                      {!isReadOnly && isReviewer && problemEditId === stage.id && (
+                      {!isReadOnly && (isResponsible || isReviewer) && problemEditId === stage.id && (
                         <div className="mt-2 p-3 bg-red-50 border border-red-300 rounded-lg space-y-2">
                           <span className="text-xs font-semibold text-red-700">{t.problemLabel}</span>
                           <textarea
