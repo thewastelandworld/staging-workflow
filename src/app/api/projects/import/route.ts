@@ -32,24 +32,24 @@ type ParsedStage = {
 }
 
 function parseTemplate(rows: unknown[][], headerRowIdx: number): { projectName: string; description: string; stages: ParsedStage[] } {
-  // Template format:
-  //   rows[0]: B(idx 1) = project title
-  //   rows[1]: B(idx 1) = description
-  //   headerRowIdx: header row (contains 'ステージ')
-  //   headerRowIdx+1 onwards: stage data at cols B-G (idx 1-6)
-  const projectName = String(rows[0]?.[1] ?? '').trim()
-  const description = String(rows[1]?.[1] ?? '').trim()
+  // xlsx.js places the first non-empty column at index 0 regardless of the actual column letter.
+  // Our template has column A as a spacer, so column B becomes index 0:
+  //   rows[0][0] = project title (B1)
+  //   rows[1][0] = description (B2)
+  //   headerRow:  [#(0), ステージ名(1), 説明(2), 担当チーム(3), 確認チーム(4), ステータス(5)]
+  const projectName = String(rows[0]?.[0] ?? '').trim()
+  const description = String(rows[1]?.[0] ?? '').trim()
 
   const defaultDeadline = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
 
   const stages: ParsedStage[] = rows
     .slice(headerRowIdx + 1)
-    .filter((r) => String(r[2] ?? '').trim())
+    .filter((r) => String(r[1] ?? '').trim())
     .map((r) => ({
-      name: String(r[2]).trim(),
-      description: String(r[3] ?? '').trim(),
-      teamName: String(r[4] ?? '').trim(),
-      reviewerTeamName: String(r[5] ?? '').trim(),
+      name: String(r[1]).trim(),
+      description: String(r[2] ?? '').trim(),
+      teamName: String(r[3] ?? '').trim(),
+      reviewerTeamName: String(r[4] ?? '').trim(),
       deadline: defaultDeadline,
     }))
 
@@ -136,7 +136,8 @@ export async function POST(req: Request) {
   const headerRowIdx = rows.findIndex((r) =>
     r.some((cell) => String(cell).includes('ステージ'))
   )
-  const isTemplate = String(rows[0]?.[1] ?? '').trim().length > 0 && headerRowIdx !== -1
+  // rows[0][0] = first non-empty column = project title in our template (xlsx shifts empty leading columns)
+  const isTemplate = String(rows[0]?.[0] ?? '').trim().length > 0 && headerRowIdx !== -1
 
   let parsed: { projectName: string; description: string; stages: ParsedStage[] }
   try {
