@@ -7,22 +7,6 @@ import { log } from '@/lib/logger'
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16']
 
-async function resolveTeam(name: string, teamMap: Map<string, string>, colorIndex: number): Promise<string> {
-  const trimmed = name.trim()
-  if (teamMap.has(trimmed)) return teamMap.get(trimmed)!
-  const id = uuid()
-  await getSupabase().from('teams').insert({
-    id,
-    name: trimmed,
-    color: COLORS[colorIndex % COLORS.length],
-    created_at: new Date().toISOString(),
-  })
-  teamMap.set(trimmed, id)
-  revalidateTag('teams', { expire: 0 })
-  log.info('Team auto-created during import', { name: trimmed, id })
-  return id
-}
-
 type ParsedStage = {
   name: string
   description: string
@@ -31,17 +15,26 @@ type ParsedStage = {
   deadline: string
 }
 
-function parseTemplate(rows: unknown[][], headerRowIdx: number): { projectName: string; description: string; stages: ParsedStage[] } {
-  // xlsx.js places the first non-empty column at index 0 regardless of the actual column letter.
-  // Our template has column A as a spacer, so column B becomes index 0:
-  //   rows[0][0] = project title (B1)
-  //   rows[1][0] = description (B2)
-  //   headerRow:  [#(0), ステージ名(1), 説明(2), 担当チーム(3), 確認チーム(4), ステータス(5)]
-  const projectName = String(rows[0]?.[0] ?? '').trim()
+type ParsedProject = {
+  name: string
+  description: string
+  stages: ParsedStage[]
+}
+
+const DEFAULT_DEADLINE = () =>
+  new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+
+// ── Parser A: our app's template format (single sheet, title in row 1) ──────
+function parseTemplateSheet(rows: unknown[][]): ParsedProject {
+  // xlsx shifts empty leading columns, so column B becomes index 0
+  const name = String(rows[0]?.[0] ?? '').trim()
   const description = String(rows[1]?.[0] ?? '').trim()
+  const headerRowIdx = rows.findIndex((r) =>
+    r.some((cell) => String(cell).includes('ステージ'))
+  )
+  if (headerRowIdx === -1) throw new Error('ヘッダー行が見つかりません')
 
-  const defaultDeadline = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
-
+  const deadline = DEFAULT_DEADLINE()
   const stages: ParsedStage[] = rows
     .slice(headerRowIdx + 1)
     .filter((r) => String(r[1] ?? '').trim())
@@ -50,15 +43,14 @@ function parseTemplate(rows: unknown[][], headerRowIdx: number): { projectName: 
       description: String(r[2] ?? '').trim(),
       teamName: String(r[3] ?? '').trim(),
       reviewerTeamName: String(r[4] ?? '').trim(),
-      deadline: defaultDeadline,
+      deadline,
     }))
 
-  return { projectName, description, stages }
+  return { name, description, stages }
 }
 
-function parseSimple(rows: unknown[][]): { projectName: string; description: string; stages: ParsedStage[] } {
-  // Simple format: row 1 = headers, row 2+ = data
-  // Expected headers (flexible matching): ステージ名/名前/name, 説明/description, 担当チーム/team, 確認チーム/reviewer, 期限/deadline
+// ── Parser B: per-sheet format (sheet name = case name, row 1 = headers) ────
+function parsePerSheet(sheetName: string, rows: unknown[][]): ParsedProject {
   const headers = (rows[0] ?? []).map((h) => String(h).trim().toLowerCase())
 
   function colOf(...keys: string[]): number {
@@ -69,18 +61,15 @@ function parseSimple(rows: unknown[][]): { projectName: string; description: str
     return -1
   }
 
-  const nameCol     = colOf('ステージ名', '名前', 'name')
+  const nameCol     = colOf('ステージ名', '名前', 'stage', 'name')
   const descCol     = colOf('説明', 'description', '内容')
   const teamCol     = colOf('担当チーム', '担当', 'team')
   const reviewerCol = colOf('確認チーム', '確認', 'reviewer')
   const deadlineCol = colOf('期限', 'deadline', '締切')
-  const titleCol    = colOf('プロジェクト名', 'ケース名', 'project')
 
-  if (nameCol === -1) throw new Error('「ステージ名」列が見つかりません')
+  if (nameCol === -1) throw new Error(`シート「${sheetName}」に「ステージ名」列が見つかりません`)
 
-  const projectName = titleCol !== -1 ? String(rows[1]?.[titleCol] ?? '').trim() : 'インポートプロジェクト'
-  const defaultDeadline = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
-
+  const deadline = DEFAULT_DEADLINE()
   const stages: ParsedStage[] = rows
     .slice(1)
     .filter((r) => String(r[nameCol] ?? '').trim())
@@ -90,98 +79,56 @@ function parseSimple(rows: unknown[][]): { projectName: string; description: str
       teamName: teamCol !== -1 ? String(r[teamCol] ?? '').trim() : '',
       reviewerTeamName: reviewerCol !== -1 ? String(r[reviewerCol] ?? '').trim() : '',
       deadline: deadlineCol !== -1 && r[deadlineCol]
-        ? new Date(String(r[deadlineCol])).toISOString()
-        : defaultDeadline,
+        ? (() => { try { return new Date(String(r[deadlineCol])).toISOString() } catch { return deadline } })()
+        : deadline,
     }))
 
-  return { projectName, description: '', stages }
+  return { name: sheetName, description: '', stages }
 }
 
-export async function POST(req: Request) {
-  const deny = await assertWritable()
-  if (deny) return deny
-  const session = await getSession()
+// ── DB helpers ───────────────────────────────────────────────────────────────
+async function resolveTeam(
+  name: string,
+  teamMap: Map<string, string>,
+  colorIndex: { n: number },
+): Promise<string> {
+  const trimmed = name.trim()
+  if (teamMap.has(trimmed)) return teamMap.get(trimmed)!
+  const id = uuid()
+  await getSupabase().from('teams').insert({
+    id, name: trimmed,
+    color: COLORS[colorIndex.n++ % COLORS.length],
+    created_at: new Date().toISOString(),
+  })
+  teamMap.set(trimmed, id)
+  revalidateTag('teams', { expire: 0 })
+  log.info('Team auto-created during import', { name: trimmed })
+  return id
+}
 
-  let formData: FormData
-  try {
-    formData = await req.formData()
-  } catch {
-    return Response.json({ error: 'multipart/form-data が必要です' }, { status: 400 })
-  }
-
-  const file = formData.get('file') as File | null
-  if (!file) return Response.json({ error: 'file フィールドがありません' }, { status: 400 })
-
-  const ext = file.name.split('.').pop()?.toLowerCase()
-  if (!['xlsx', 'xls'].includes(ext ?? '')) {
-    return Response.json({ error: '.xlsx または .xls ファイルのみ対応しています' }, { status: 400 })
-  }
-
-  let rows: unknown[][]
-  try {
-    const buffer = Buffer.from(await file.arrayBuffer())
-    const wb = read(buffer, { type: 'buffer' })
-    const ws = wb.Sheets[wb.SheetNames[0]]
-    rows = utils.sheet_to_json<unknown[]>(ws, { header: 1, defval: '' })
-  } catch {
-    return Response.json({ error: 'Excel の読み込みに失敗しました' }, { status: 400 })
-  }
-
-  if (rows.length < 2) {
-    return Response.json({ error: 'データが見つかりません' }, { status: 400 })
-  }
-
-  // Find the header row dynamically (the row that contains 'ステージ')
-  // xlsx skips completely empty rows, so we cannot rely on fixed row indices
-  const headerRowIdx = rows.findIndex((r) =>
-    r.some((cell) => String(cell).includes('ステージ'))
-  )
-  // rows[0][0] = first non-empty column = project title in our template (xlsx shifts empty leading columns)
-  const isTemplate = String(rows[0]?.[0] ?? '').trim().length > 0 && headerRowIdx !== -1
-
-  let parsed: { projectName: string; description: string; stages: ParsedStage[] }
-  try {
-    parsed = isTemplate ? parseTemplate(rows, headerRowIdx) : parseSimple(rows)
-  } catch (e) {
-    return Response.json({ error: String(e) }, { status: 400 })
-  }
-
-  const { projectName, description, stages } = parsed
-
-  if (!projectName) return Response.json({ error: 'プロジェクト名が見つかりません' }, { status: 400 })
-  if (stages.length === 0) return Response.json({ error: 'ステージデータが見つかりません' }, { status: 400 })
-
-  // Resolve teams
-  const { data: existingTeams } = await getSupabase().from('teams').select('id, name')
-  const teamMap = new Map((existingTeams ?? []).map((t) => [t.name as string, t.id as string]))
-  let colorIndex = existingTeams?.length ?? 0
-
-  // Create project
+async function createProject(
+  project: ParsedProject,
+  createdBy: string | null,
+  teamMap: Map<string, string>,
+  colorIndex: { n: number },
+): Promise<{ projectId: string; stageCount: number; error?: string }> {
   const projectId = uuid()
   const { error: projErr } = await getSupabase().from('projects').insert({
     id: projectId,
-    name: projectName,
-    description,
+    name: project.name,
+    description: project.description,
     created_at: new Date().toISOString(),
-    created_by: session?.user ?? null,
+    created_by: createdBy,
   })
-  if (projErr) {
-    log.error('Import: project create failed', { error: projErr.message })
-    return Response.json({ error: projErr.message }, { status: 500 })
-  }
+  if (projErr) return { projectId, stageCount: 0, error: projErr.message }
 
-  // Create stages
-  let createdCount = 0
-  for (let i = 0; i < stages.length; i++) {
-    const s = stages[i]
-    if (!s.teamName) {
-      log.warn('Import: stage skipped (no team)', { stage: s.name })
-      continue
-    }
+  let stageCount = 0
+  for (let i = 0; i < project.stages.length; i++) {
+    const s = project.stages[i]
+    if (!s.teamName) continue
 
-    const teamId = await resolveTeam(s.teamName, teamMap, colorIndex++)
+    const teamId = await resolveTeam(s.teamName, teamMap, colorIndex)
     const stageId = uuid()
-
     const { error: stageErr } = await getSupabase().from('stages').insert({
       id: stageId,
       project_id: projectId,
@@ -193,13 +140,10 @@ export async function POST(req: Request) {
       status: 'pending',
       email_sent: false,
     })
-    if (stageErr) {
-      log.error('Import: stage create failed', { stage: s.name, error: stageErr.message })
-      continue
-    }
+    if (stageErr) continue
 
     if (s.reviewerTeamName) {
-      const reviewerId = await resolveTeam(s.reviewerTeamName, teamMap, colorIndex++)
+      const reviewerId = await resolveTeam(s.reviewerTeamName, teamMap, colorIndex)
       await getSupabase().from('stage_reviewers').insert({
         stage_id: stageId,
         team_id: reviewerId,
@@ -209,12 +153,87 @@ export async function POST(req: Request) {
         note: null,
       })
     }
+    stageCount++
+  }
 
-    createdCount++
+  return { projectId, stageCount }
+}
+
+// ── Route handler ─────────────────────────────────────────────────────────────
+export async function POST(req: Request) {
+  const deny = await assertWritable()
+  if (deny) return deny
+  const session = await getSession()
+
+  let formData: FormData
+  try { formData = await req.formData() } catch {
+    return Response.json({ error: 'multipart/form-data が必要です' }, { status: 400 })
+  }
+
+  const file = formData.get('file') as File | null
+  if (!file) return Response.json({ error: 'file フィールドがありません' }, { status: 400 })
+
+  const ext = file.name.split('.').pop()?.toLowerCase()
+  if (!['xlsx', 'xls'].includes(ext ?? '')) {
+    return Response.json({ error: '.xlsx または .xls ファイルのみ対応しています' }, { status: 400 })
+  }
+
+  let wb: ReturnType<typeof read>
+  try {
+    wb = read(Buffer.from(await file.arrayBuffer()), { type: 'buffer' })
+  } catch {
+    return Response.json({ error: 'Excel の読み込みに失敗しました' }, { status: 400 })
+  }
+
+  // Resolve teams shared across all sheets
+  const { data: existingTeams } = await getSupabase().from('teams').select('id, name')
+  const teamMap = new Map((existingTeams ?? []).map((t) => [t.name as string, t.id as string]))
+  const colorIndex = { n: existingTeams?.length ?? 0 }
+  const createdBy = session?.user ?? null
+
+  const results: { name: string; stageCount: number; error?: string }[] = []
+
+  const isMultiSheet = wb.SheetNames.length > 1
+
+  for (const sheetName of wb.SheetNames) {
+    const ws = wb.Sheets[sheetName]
+    const rows = utils.sheet_to_json<unknown[]>(ws, { header: 1, defval: '' })
+    if (rows.length < 2) continue
+
+    let project: ParsedProject
+    try {
+      if (isMultiSheet) {
+        // Multi-sheet mode: each sheet = 1 case, sheet name = project name
+        project = parsePerSheet(sheetName, rows)
+      } else {
+        // Single-sheet mode: auto-detect template vs simple format
+        const hasTitle = String(rows[0]?.[0] ?? '').trim().length > 0
+        const hasStageHeader = rows.some((r) => r.some((c) => String(c).includes('ステージ')))
+        project = hasTitle && hasStageHeader
+          ? parseTemplateSheet(rows)
+          : parsePerSheet(sheetName, rows)
+      }
+    } catch (e) {
+      results.push({ name: sheetName, stageCount: 0, error: String(e) })
+      continue
+    }
+
+    if (!project.name || project.stages.length === 0) {
+      results.push({ name: sheetName, stageCount: 0, error: 'ステージデータが見つかりません' })
+      continue
+    }
+
+    const result = await createProject(project, createdBy, teamMap, colorIndex)
+    log.info('Import: project created', { name: project.name, stageCount: result.stageCount })
+    results.push({ name: project.name, stageCount: result.stageCount, error: result.error })
+  }
+
+  if (results.length === 0) {
+    return Response.json({ error: 'インポートできるデータが見つかりませんでした' }, { status: 400 })
   }
 
   revalidateTag('projects', { expire: 0 })
-  log.info('Import complete', { projectId, projectName, stageCount: createdCount })
 
-  return Response.json({ ok: true, projectId, name: projectName, stageCount: createdCount }, { status: 201 })
+  const totalStages = results.reduce((s, r) => s + r.stageCount, 0)
+  return Response.json({ ok: true, projects: results, totalStages }, { status: 201 })
 }
