@@ -66,6 +66,8 @@ export default function StageTimeline({ project, teams, onStageUpdate, onStageDe
   const [saving, setSaving] = useState(false)
   const [problemEditId, setProblemEditId] = useState<string | null>(null)
   const [problemDraft, setProblemDraft] = useState<Record<string, string>>({})
+  const [checkContentEditKey, setCheckContentEditKey] = useState<string | null>(null)
+  const [checkContentDraft, setCheckContentDraft] = useState<Record<string, string>>({})
 
   const sorted = [...project.stages].sort((a, b) => a.order - b.order)
 
@@ -175,6 +177,22 @@ export default function StageTimeline({ project, teams, onStageUpdate, onStageDe
   function openProblemEdit(stage: Stage) {
     setProblemDraft((prev) => ({ ...prev, [stage.id]: stage.problem ?? '' }))
     setProblemEditId(stage.id)
+  }
+
+  function openCheckContentEdit(stage: Stage, teamId: string, current: string) {
+    const key = `${stage.id}:${teamId}`
+    setCheckContentDraft((prev) => ({ ...prev, [key]: current }))
+    setCheckContentEditKey(key)
+  }
+
+  async function saveCheckContent(stage: Stage, teamId: string) {
+    const key = `${stage.id}:${teamId}`
+    const newContent = checkContentDraft[key] ?? ''
+    const updatedReviewers = (stage.reviewers ?? []).map((r) =>
+      r.teamId === teamId ? { ...r, checkContent: newContent } : r
+    )
+    await onStageUpdate(stage.id, { reviewers: updatedReviewers })
+    setCheckContentEditKey(null)
   }
 
   async function handleReviewerCheck(stage: Stage, teamId: string) {
@@ -504,7 +522,47 @@ export default function StageTimeline({ project, teams, onStageUpdate, onStageDe
                                       </span>
                                     )}
                                   </div>
-                                  {reviewer.checkContent && !(isActiveReviewer && stage.status === 'reviewing') && (
+                                  {/* 確認内容表示 + 確認チームによるインライン編集（確認操作中は非表示） */}
+                                  {!isDone && !isReadOnly && (isAdmin || userTeamIds.includes(reviewer.teamId)) && !(isActiveReviewer && stage.status === 'reviewing') ? (
+                                    checkContentEditKey === key ? (
+                                      <div className="ml-6 space-y-1.5">
+                                        <textarea
+                                          autoFocus
+                                          className="w-full px-2 py-1.5 border border-purple-300 rounded text-xs text-black focus:outline-none focus:ring-2 focus:ring-purple-400 resize-none"
+                                          rows={3}
+                                          placeholder="確認内容を入力..."
+                                          value={checkContentDraft[key] ?? ''}
+                                          onChange={(e) => setCheckContentDraft((prev) => ({ ...prev, [key]: e.target.value }))}
+                                        />
+                                        <div className="flex gap-1.5">
+                                          <button onClick={() => saveCheckContent(stage, reviewer.teamId)}
+                                            className="text-xs px-2 py-1 bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors">
+                                            保存
+                                          </button>
+                                          <button onClick={() => setCheckContentEditKey(null)}
+                                            className="text-xs px-2 py-1 bg-white text-gray-600 border border-gray-300 rounded hover:bg-gray-50 transition-colors">
+                                            {t.cancel}
+                                          </button>
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <div className="ml-6 flex items-start gap-2">
+                                        {reviewer.checkContent ? (
+                                          <div className="flex-1 px-2 py-1.5 bg-gray-50 border border-gray-200 rounded text-xs text-gray-500 whitespace-pre-wrap">
+                                            <span className="font-medium text-gray-400">{t.checkContentLabel}: </span>{reviewer.checkContent}
+                                          </div>
+                                        ) : (
+                                          <span className="flex-1 text-xs text-gray-300 italic">確認内容未設定</span>
+                                        )}
+                                        <button
+                                          onClick={() => openCheckContentEdit(stage, reviewer.teamId, reviewer.checkContent ?? '')}
+                                          className="text-xs text-purple-500 hover:text-purple-700 whitespace-nowrap flex-shrink-0"
+                                        >
+                                          {reviewer.checkContent ? '編集' : '入力'}
+                                        </button>
+                                      </div>
+                                    )
+                                  ) : reviewer.checkContent && !(isActiveReviewer && stage.status === 'reviewing') && (
                                     <div className={`ml-6 px-2 py-1.5 border rounded text-xs whitespace-pre-wrap ${isDone ? 'bg-gray-50 border-gray-100 text-gray-500' : 'bg-gray-50 border-gray-200 text-gray-500'}`}>
                                       <span className="font-medium text-gray-400">{t.checkContentLabel}: </span>{reviewer.checkContent}
                                     </div>
