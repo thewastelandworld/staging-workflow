@@ -49,9 +49,20 @@ function parseTemplateSheet(rows: unknown[][]): ParsedProject {
   return { name, description, stages }
 }
 
-// ── Parser B: per-sheet format (sheet name = case name, row 1 = headers) ────
+// ── Parser B: per-sheet format (sheet name = case name) ────────────────────
+// Format:
+//   Row 1 (optional): "ケース説明" | <description text>
+//   Row 2 (or 1):     headers — ステージ名 | 説明 | 担当チーム | 確認チーム | 期限
+//   Row 3+ (or 2+):   stage data
 function parsePerSheet(sheetName: string, rows: unknown[][]): ParsedProject {
-  const headers = (rows[0] ?? []).map((h) => String(h).trim().toLowerCase())
+  // Detect optional description row: first cell contains "ケース説明" or "case"
+  const firstCell = String(rows[0]?.[0] ?? '').trim().toLowerCase()
+  const hasDescRow = firstCell.includes('ケース説明') || firstCell.includes('case description')
+  const description = hasDescRow ? String(rows[0]?.[1] ?? '').trim() : ''
+  const headerRow = hasDescRow ? 1 : 0
+  const dataStartRow = headerRow + 1
+
+  const headers = (rows[headerRow] ?? []).map((h) => String(h).trim().toLowerCase())
 
   function colOf(...keys: string[]): number {
     for (const key of keys) {
@@ -71,7 +82,7 @@ function parsePerSheet(sheetName: string, rows: unknown[][]): ParsedProject {
 
   const deadline = DEFAULT_DEADLINE()
   const stages: ParsedStage[] = rows
-    .slice(1)
+    .slice(dataStartRow)
     .filter((r) => String(r[nameCol] ?? '').trim())
     .map((r) => ({
       name: String(r[nameCol]).trim(),
@@ -83,7 +94,7 @@ function parsePerSheet(sheetName: string, rows: unknown[][]): ParsedProject {
         : deadline,
     }))
 
-  return { name: sheetName, description: '', stages }
+  return { name: sheetName, description, stages }
 }
 
 // ── DB helpers ───────────────────────────────────────────────────────────────
