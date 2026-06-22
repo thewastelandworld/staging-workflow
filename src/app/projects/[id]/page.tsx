@@ -94,6 +94,8 @@ function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
     </div>
   )
 
+  const isResponsibleForProject = isAdmin || project.stages.some((s) => userTeamIds.includes(s.teamId))
+
   const now = new Date()
   const totalStages = project.stages.length
   const completedCount = project.stages.filter((s) => s.status === 'completed').length
@@ -135,9 +137,9 @@ function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
               />
             ) : (
               <h1
-                className={`text-sm sm:text-lg font-bold text-gray-900 truncate ${!isReadOnly ? 'cursor-pointer hover:text-blue-600 transition-colors' : ''}`}
-                onClick={() => { if (!isReadOnly) { setEditName(project.name); setEditingName(true) } }}
-                title={!isReadOnly ? t.edit : undefined}
+                className={`text-sm sm:text-lg font-bold text-gray-900 truncate ${isResponsibleForProject ? 'cursor-pointer hover:text-blue-600 transition-colors' : ''}`}
+                onClick={() => { if (isResponsibleForProject) { setEditName(project.name); setEditingName(true) } }}
+                title={isResponsibleForProject ? t.edit : undefined}
               >
                 {project.name}
               </h1>
@@ -195,9 +197,9 @@ function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
             />
           ) : (
             <p
-              className={`text-gray-500 text-sm mb-4 min-h-[1.25rem] whitespace-pre-wrap ${!isReadOnly ? 'cursor-pointer hover:text-gray-700 transition-colors' : ''}`}
-              onClick={() => { if (!isReadOnly) { setEditDesc(project.description ?? ''); setEditingDesc(true) } }}
-              title={!isReadOnly ? t.edit : undefined}
+              className={`text-gray-500 text-sm mb-4 min-h-[1.25rem] whitespace-pre-wrap ${isResponsibleForProject ? 'cursor-pointer hover:text-gray-700 transition-colors' : ''}`}
+              onClick={() => { if (isResponsibleForProject) { setEditDesc(project.description ?? ''); setEditingDesc(true) } }}
+              title={isResponsibleForProject ? t.edit : undefined}
             >
               {project.description || <span className="text-gray-300 italic">{t.descriptionPlaceholder}</span>}
             </p>
@@ -252,12 +254,14 @@ function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 sm:p-6">
           <div className="flex items-center justify-between mb-4 sm:mb-6">
             <h2 className="font-semibold text-gray-900">{t.stageTimeline}</h2>
-            {isAdmin && (
+            {!isReadOnly && (
               <BulkCheckContentEditor
                 projectId={project.id}
                 stages={project.stages}
                 teams={teams}
                 onSaved={load}
+                isAdmin={isAdmin}
+                userTeamIds={userTeamIds}
               />
             )}
           </div>

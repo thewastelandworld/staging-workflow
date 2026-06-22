@@ -13,6 +13,9 @@ export default function DashboardPage() {
   const { isDark, toggle: toggleDark } = useDarkMode()
   const { t, locale, setLocale } = useLanguage()
   const { session, loading: sessionLoading, logout } = useSession()
+  const isAdmin = !sessionLoading && session?.permission === 'admin'
+  const userTeamIds = session?.teamIds ?? []
+  const canAdd = !sessionLoading && !!session && session.permission !== 'readonly'
   const [projects, setProjects] = useState<Project[]>([])
   const [teams, setTeams] = useState<Team[]>([])
   const [loading, setLoading] = useState(true)
@@ -157,7 +160,7 @@ export default function DashboardPage() {
         {/* Case list header */}
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-base sm:text-lg font-semibold text-gray-900">{t.caseList}</h2>
-          {!sessionLoading && session?.permission !== 'readonly' && (
+          {canAdd && (
             <div className="flex items-center gap-2">
               <label className={`px-3 sm:px-4 py-2 rounded-lg text-sm border border-blue-300 text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer ${importing ? 'opacity-50 pointer-events-none' : ''}`}>
                 {importing ? 'インポート中...' : 'Excelインポート'}
@@ -306,7 +309,7 @@ export default function DashboardPage() {
                           {new Date(p.createdAt).toLocaleDateString(dateLocale)}
                         </td>
                         <td className="px-5 py-4 text-right">
-                          {!sessionLoading && session?.permission !== 'readonly' && (
+                          {(isAdmin || p.stages.some((s: Stage) => userTeamIds.includes(s.teamId))) && (
                             <button onClick={() => deleteProject(p.id)}
                               className="text-gray-300 hover:text-red-400 transition-colors text-base">✕</button>
                           )}
@@ -344,7 +347,7 @@ export default function DashboardPage() {
                         className="font-semibold text-gray-900 hover:text-blue-600 transition-colors text-base leading-snug">
                         {p.name}
                       </Link>
-                      {!sessionLoading && session?.permission !== 'readonly' && (
+                      {(isAdmin || p.stages.some((s: Stage) => userTeamIds.includes(s.teamId))) && (
                         <button onClick={() => deleteProject(p.id)}
                           className="text-gray-300 hover:text-red-400 transition-colors text-base flex-shrink-0">✕</button>
                       )}

@@ -37,6 +37,7 @@ export interface Stage {
   status: StageStatus
   notes?: string
   problem?: string
+  problemTeamId?: string
   emailSent?: boolean
   reviewers?: StageReviewer[]
 }

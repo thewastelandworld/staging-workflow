@@ -159,9 +159,16 @@ export default function StageTimeline({ project, teams, onStageUpdate, onStageDe
     setLoadingId(null)
   }
 
-  async function saveProblem(stageId: string) {
-    const text = (problemDraft[stageId] ?? '').trim()
-    await onStageUpdate(stageId, { problem: text })
+  function getProblemTeamId(stage: Stage): string | undefined {
+    if (isAdmin) return undefined
+    if (userTeamIds.includes(stage.teamId)) return stage.teamId
+    return stage.reviewers?.find((r) => userTeamIds.includes(r.teamId))?.teamId
+  }
+
+  async function saveProblem(stage: Stage) {
+    const text = (problemDraft[stage.id] ?? '').trim()
+    const problemTeamId = text ? getProblemTeamId(stage) : undefined
+    await onStageUpdate(stage.id, { problem: text, problemTeamId })
     setProblemEditId(null)
   }
 
@@ -214,6 +221,7 @@ export default function StageTimeline({ project, teams, onStageUpdate, onStageDe
             // Per-stage role flags
             const isResponsible = isAdmin || userTeamIds.includes(stage.teamId)
             const isReviewer = isAdmin || (stage.reviewers?.some((r) => userTeamIds.includes(r.teamId)) ?? false)
+            const canEditProblem = isAdmin || userTeamIds.includes(stage.problemTeamId ?? '')
 
             const hasProblem = !!stage.problem && status !== 'completed'
 
@@ -386,7 +394,7 @@ export default function StageTimeline({ project, teams, onStageUpdate, onStageDe
                               <span className="text-xs font-semibold text-red-700">{t.problemLabel}</span>
                               <p className="text-sm text-red-800 mt-0.5 whitespace-pre-wrap">{stage.problem}</p>
                             </div>
-                            {!isReadOnly && (isResponsible || isReviewer) && status !== 'completed' && (
+                            {!isReadOnly && canEditProblem && status !== 'completed' && (
                               <div className="flex flex-col gap-1 flex-shrink-0">
                                 <button
                                   onClick={() => openProblemEdit(stage)}
@@ -407,7 +415,7 @@ export default function StageTimeline({ project, teams, onStageUpdate, onStageDe
                       )}
 
                       {/* Problem edit form */}
-                      {!isReadOnly && (isResponsible || isReviewer) && problemEditId === stage.id && (
+                      {!isReadOnly && (isResponsible || isReviewer || canEditProblem) && problemEditId === stage.id && (
                         <div className="mt-2 p-3 bg-red-50 border border-red-300 rounded-lg space-y-2">
                           <span className="text-xs font-semibold text-red-700">{t.problemLabel}</span>
                           <textarea
@@ -420,7 +428,7 @@ export default function StageTimeline({ project, teams, onStageUpdate, onStageDe
                           />
                           <div className="flex gap-2">
                             <button
-                              onClick={() => saveProblem(stage.id)}
+                              onClick={() => saveProblem(stage)}
                               className="text-xs px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
                             >
                               {t.saveProblem}

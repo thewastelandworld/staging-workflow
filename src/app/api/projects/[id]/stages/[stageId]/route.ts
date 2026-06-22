@@ -218,6 +218,9 @@ export async function PATCH(req: Request, { params }: Params) {
       status: updated.status,
       notes: updated.notes ?? null,
       problem: (updatedAny.problem as string | undefined) ?? null,
+      problem_team_id: (updatedAny.problem as string | undefined)
+        ? ((updatedAny.problemTeamId as string | undefined) ?? null)
+        : null,
       email_sent: updated.emailSent ?? false,
       started_at: updated.startedAt ?? null,
       completed_at: updated.completedAt ?? null,

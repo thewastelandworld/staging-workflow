@@ -22,6 +22,7 @@ export type StageRow = {
   status: string
   notes: string | null
   problem: string | null
+  problem_team_id: string | null
   email_sent: boolean | null
   stage_reviewers?: StageReviewerRow[]
 }
@@ -50,6 +51,7 @@ export function toStage(row: StageRow): Stage {
     status: row.status as StageStatus,
     notes: row.notes ?? undefined,
     problem: row.problem ?? undefined,
+    problemTeamId: row.problem_team_id ?? undefined,
     emailSent: row.email_sent ?? false,
     reviewers: (row.stage_reviewers ?? [])
       .sort((a, b) => a.order - b.order)

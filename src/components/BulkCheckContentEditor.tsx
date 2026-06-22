@@ -9,9 +9,11 @@ interface Props {
   stages: Stage[]
   teams: Team[]
   onSaved: () => void
+  isAdmin: boolean
+  userTeamIds: string[]
 }
 
-export default function BulkCheckContentEditor({ projectId, stages, teams, onSaved }: Props) {
+export default function BulkCheckContentEditor({ projectId, stages, teams, onSaved, isAdmin, userTeamIds }: Props) {
   const { t } = useLanguage()
   const [open, setOpen] = useState(false)
   const [selectedTeamId, setSelectedTeamId] = useState('')
@@ -26,11 +28,11 @@ export default function BulkCheckContentEditor({ projectId, stages, teams, onSav
     [stages]
   )
 
-  // 確認チームとして登場するチームの一覧
+  // 確認チームとして登場するチームの一覧（admin以外は自チームのみ）
   const reviewerTeams = useMemo(() => {
     const ids = new Set(pendingStages.flatMap((s) => (s.reviewers ?? []).map((r) => r.teamId)))
-    return teams.filter((t) => ids.has(t.id))
-  }, [pendingStages, teams])
+    return teams.filter((t) => ids.has(t.id) && (isAdmin || userTeamIds.includes(t.id)))
+  }, [pendingStages, teams, isAdmin, userTeamIds])
 
   // 選択チームが確認チームに含まれる待機中ステージ
   const targetStages = useMemo(

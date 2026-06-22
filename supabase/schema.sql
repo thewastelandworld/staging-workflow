@@ -122,6 +122,13 @@ CREATE TABLE IF NOT EXISTS user_teams (
 --
 --   ALTER TABLE user_teams ADD COLUMN IF NOT EXISTS role TEXT;
 
+-- Migration: add problem_team_id to stages (run once in Supabase SQL Editor)
+--
+--   ALTER TABLE stages ADD COLUMN IF NOT EXISTS problem_team_id TEXT REFERENCES teams(id);
+--
+-- This column stores the team_id of the team that reported the problem.
+-- Only that team (or admin) can edit/resolve the problem.
+
 -- Disable RLS (enable and add policies if you need auth later)
 ALTER TABLE teams     DISABLE ROW LEVEL SECURITY;
 ALTER TABLE projects  DISABLE ROW LEVEL SECURITY;
