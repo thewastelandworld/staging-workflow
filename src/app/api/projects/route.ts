@@ -47,11 +47,15 @@ export async function GET() {
       for (const row of userTeams ?? []) userTeamIds.add(row.team_id as string)
     }
 
-    // Return only projects the user created or where their team has a stage
+    // Return only projects the user created, where their team has a stage, or where their team is a reviewer
     const visible = allProjects.filter(
       (p) =>
         p.createdBy === session.user ||
-        p.stages.some((s) => userTeamIds.has(s.teamId))
+        p.stages.some(
+          (s) =>
+            userTeamIds.has(s.teamId) ||
+            s.reviewers?.some((r) => userTeamIds.has(r.teamId))
+        )
     )
 
     return NextResponse.json(visible)
