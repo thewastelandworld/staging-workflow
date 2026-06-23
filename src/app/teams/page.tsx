@@ -47,13 +47,15 @@ export default function TeamsPage() {
     skipped: number
     usersCreated: { username: string; password: string }[]
     invalidUsernames: string[]
-  }[] | null>(() => {
+  }[] | null>(null)
+  const [importError, setImportError] = useState<string | null>(null)
+
+  useEffect(() => {
     try {
       const saved = sessionStorage.getItem('teamImportResult')
-      return saved ? JSON.parse(saved) : null
-    } catch { return null }
-  })
-  const [importError, setImportError] = useState<string | null>(null)
+      if (saved) setImportResult(JSON.parse(saved))
+    } catch { /* ignore */ }
+  }, [])
 
   function saveImportResult(result: typeof importResult) {
     setImportResult(result)
