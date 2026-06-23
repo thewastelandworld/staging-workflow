@@ -258,10 +258,18 @@ export default function TeamsPage() {
                 <a
                   href="/sample_team_import.xlsx"
                   download
-                  className="px-2 py-2 border border-l-0 border-gray-300 rounded-r-lg text-xs text-gray-400 hover:bg-gray-50 hover:text-gray-600 transition-colors"
-                  title="サンプルファイルをダウンロード"
+                  className="px-2 py-2 border border-l-0 border-gray-300 text-xs text-gray-400 hover:bg-gray-50 hover:text-gray-600 transition-colors"
+                  title="サンプル（単一シート）"
                 >
-                  ↓サンプル
+                  ↓単一
+                </a>
+                <a
+                  href="/sample_team_import_multisheet.xlsx"
+                  download
+                  className="px-2 py-2 border border-l-0 border-gray-300 rounded-r-lg text-xs text-gray-400 hover:bg-gray-50 hover:text-gray-600 transition-colors"
+                  title="サンプル（マルチシート）"
+                >
+                  ↓複数シート
                 </a>
               </div>
             </div>
