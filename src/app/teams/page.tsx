@@ -40,7 +40,14 @@ export default function TeamsPage() {
   const [allUsers, setAllUsers] = useState<UserOption[]>([])
   const [leaderBusy, setLeaderBusy] = useState<string | null>(null)
   const [importing, setImporting] = useState(false)
-  const [importResult, setImportResult] = useState<{ teamName: string; created: boolean; added: number; skipped: number; notFound: string[] }[] | null>(null)
+  const [importResult, setImportResult] = useState<{
+    teamName: string
+    created: boolean
+    added: number
+    skipped: number
+    usersCreated: { username: string; password: string }[]
+    invalidUsernames: string[]
+  }[] | null>(null)
   const [importError, setImportError] = useState<string | null>(null)
   const comboRefs = useRef<Record<string, HTMLDivElement | null>>({})
 
@@ -196,15 +203,29 @@ export default function TeamsPage() {
               <span className="text-sm font-medium text-green-800">インポート完了</span>
               <button onClick={() => setImportResult(null)} className="text-green-400 hover:text-green-600">✕</button>
             </div>
-            <div className="space-y-1">
+            <div className="space-y-2">
               {importResult.map((r, i) => (
-                <div key={i} className="text-xs text-green-700">
-                  <span className="font-medium">{r.teamName}</span>
-                  {r.created && <span className="ml-1 text-green-600">（新規作成）</span>}
-                  <span className="ml-2">追加: {r.added}名</span>
-                  {r.skipped > 0 && <span className="ml-1 text-gray-500">・スキップ: {r.skipped}名</span>}
-                  {r.notFound.length > 0 && (
-                    <span className="ml-1 text-orange-600">・未登録ユーザー: {r.notFound.join(', ')}</span>
+                <div key={i} className="text-xs">
+                  <div className="text-green-700">
+                    <span className="font-medium">{r.teamName}</span>
+                    {r.created && <span className="ml-1">（チーム新規作成）</span>}
+                    <span className="ml-2">メンバー追加: {r.added}名</span>
+                    {r.skipped > 0 && <span className="ml-1 text-gray-500">・スキップ: {r.skipped}名</span>}
+                  </div>
+                  {r.usersCreated.length > 0 && (
+                    <div className="mt-1 ml-2 p-2 bg-yellow-50 border border-yellow-200 rounded">
+                      <div className="text-yellow-800 font-medium mb-1">新規作成ユーザー（初期パスワードを配布してください）</div>
+                      {r.usersCreated.map((u) => (
+                        <div key={u.username} className="font-mono text-yellow-900">
+                          {u.username} / {u.password}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {r.invalidUsernames.length > 0 && (
+                    <div className="mt-1 ml-2 text-orange-600">
+                      スキップ（形式不正または作成失敗）: {r.invalidUsernames.join(', ')}
+                    </div>
                   )}
                 </div>
               ))}
