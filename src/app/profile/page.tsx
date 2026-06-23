@@ -15,6 +15,7 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
+  const [myTeams, setMyTeams] = useState<{ id: string; name: string; color: string; role?: string }[]>([])
 
   useEffect(() => {
     if (!sessionLoading && !session) {
@@ -24,17 +25,30 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (sessionLoading) return
-    fetch('/api/auth/me')
-      .then(r => r.ok ? r.json() : null)
-      .then(data => {
-        if (data) {
-          setDisplayName(data.displayName ?? '')
-          setEmail(data.email ?? '')
-        }
-        setLoading(false)
-      })
-      .catch(() => setLoading(false))
-  }, [sessionLoading])
+    Promise.all([
+      fetch('/api/auth/me').then(r => r.ok ? r.json() : null),
+      fetch('/api/teams').then(r => r.ok ? r.json() : []),
+    ]).then(([me, teams]) => {
+      if (me) {
+        setDisplayName(me.displayName ?? '')
+        setEmail(me.email ?? '')
+      }
+      if (session && Array.isArray(teams)) {
+        const belonging = teams
+          .filter((t: { members: { username: string; role?: string }[] }) =>
+            t.members?.some((m: { username: string }) => m.username === session.user)
+          )
+          .map((t: { id: string; name: string; color: string; members: { username: string; role?: string }[] }) => ({
+            id: t.id,
+            name: t.name,
+            color: t.color,
+            role: t.members.find((m: { username: string }) => m.username === session.user)?.role,
+          }))
+        setMyTeams(belonging)
+      }
+      setLoading(false)
+    }).catch(() => setLoading(false))
+  }, [sessionLoading, session])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -91,7 +105,7 @@ export default function ProfilePage() {
             <p className="text-sm text-gray-400 mt-1">ユーザー名: <span className="font-medium text-gray-600">{session?.user}</span></p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4 mb-8">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 表示名 <span className="text-red-500">*</span>
@@ -136,6 +150,25 @@ export default function ProfilePage() {
               </button>
             </div>
           </form>
+
+          <div>
+            <h2 className="text-sm font-semibold text-gray-700 mb-3">所属チーム</h2>
+            {myTeams.length === 0 ? (
+              <p className="text-sm text-gray-400">どのチームにも所属していません</p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {myTeams.map(team => (
+                  <span key={team.id} className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-full text-sm text-gray-700">
+                    <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: team.color }} />
+                    {team.name}
+                    {team.role && (
+                      <span className="text-xs text-gray-400">({team.role})</span>
+                    )}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </main>
     </div>
