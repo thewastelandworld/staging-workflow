@@ -17,3 +17,11 @@ export async function assertWritable(): Promise<Response | null> {
   }
   return null
 }
+
+export async function assertAdmin(): Promise<Response | null> {
+  const session = await getSession()
+  if (!session || session.permission !== 'admin') {
+    return Response.json({ error: 'Admin only' }, { status: 403 })
+  }
+  return null
+}

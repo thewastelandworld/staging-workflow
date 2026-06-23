@@ -1,5 +1,6 @@
 import { getSession } from '@/lib/auth'
 import { getSupabase } from '@/lib/supabase'
+import { revalidateTag } from 'next/cache'
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await getSession()
@@ -26,13 +27,14 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
   // Change permission
   const { permission } = body
-  if (permission !== 'user' && permission !== 'readonly') {
+  if (permission !== 'user' && permission !== 'readonly' && permission !== 'team_leader') {
     return Response.json({ error: 'Invalid permission' }, { status: 400 })
   }
   const { error } = await supabase.from('users').update({ permission }).eq('id', id)
   if (error) {
     return Response.json({ error: process.env.NODE_ENV === 'development' ? error.message : 'DB error' }, { status: 500 })
   }
+  revalidateTag('teams', { expire: 0 })
   return Response.json({ ok: true })
 }
 

@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, useCallback } from 'react'
 
-type Permission = 'admin' | 'user' | 'readonly'
+type Permission = 'admin' | 'team_leader' | 'user' | 'readonly'
 interface SessionState { user: string; permission: Permission; displayName: string | null; email: string | null; teamIds: string[] }
 
 const SessionContext = createContext<{

@@ -2,14 +2,35 @@ import { NextResponse } from 'next/server'
 import { getSupabase } from '@/lib/supabase'
 import { revalidateTag } from 'next/cache'
 import { log } from '@/lib/logger'
-import { assertWritable } from '@/lib/auth'
+import { getSession } from '@/lib/auth'
 
 type Params = { params: Promise<{ id: string; userId: string }> }
 
+async function getCallerTeamIds(username: string): Promise<string[]> {
+  const { data: user } = await getSupabase().from('users').select('id').eq('username', username).maybeSingle()
+  if (!user) return []
+  const { data: ut } = await getSupabase().from('user_teams').select('team_id').eq('user_id', user.id)
+  return (ut ?? []).map((r) => r.team_id as string)
+}
+
 export async function DELETE(_req: Request, { params }: Params) {
-  const deny = await assertWritable()
-  if (deny) return deny
+  const session = await getSession()
+  if (!session || session.permission === 'readonly') {
+    return NextResponse.json({ error: 'Read-only access' }, { status: 403 })
+  }
+
   const { id, userId } = await params
+
+  if (session.permission !== 'admin') {
+    if (session.permission !== 'team_leader') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+    const teamIds = await getCallerTeamIds(session.user)
+    if (!teamIds.includes(id)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+  }
+
   const { error } = await getSupabase()
     .from('user_teams')
     .delete()

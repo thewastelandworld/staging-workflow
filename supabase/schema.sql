@@ -71,12 +71,12 @@ CREATE TABLE IF NOT EXISTS stage_reviewers (
 --   ALTER TABLE projects DROP COLUMN stages;
 
 -- Users table (for login authentication)
--- permission: 'admin' = 管理員, 'user' = 使用者, 'readonly' = 読み取り専用
+-- permission: 'admin' = 管理員, 'team_leader' = チームリーダー, 'user' = 使用者, 'readonly' = 読み取り専用
 CREATE TABLE IF NOT EXISTS users (
   id            UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
   username      TEXT        NOT NULL UNIQUE,
   password_hash TEXT        NOT NULL,
-  permission    TEXT        NOT NULL DEFAULT 'readonly' CHECK (permission IN ('admin', 'user', 'readonly')),
+  permission    TEXT        NOT NULL DEFAULT 'readonly' CHECK (permission IN ('admin', 'team_leader', 'user', 'readonly')),
   display_name  TEXT,
   email         TEXT,
   created_at    TIMESTAMPTZ NOT NULL DEFAULT now()

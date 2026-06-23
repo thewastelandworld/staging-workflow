@@ -6,6 +6,7 @@ export interface Member {
   name: string    // users.display_name
   email: string   // users.email
   role?: string   // team-specific role from user_teams.role
+  permission?: string  // users.permission
 }
 
 export interface Team {

@@ -9,6 +9,28 @@ import { useSession } from '@/components/SessionProvider'
 import { LOCALES, type Locale } from '@/lib/i18n'
 import { getProjectStatus } from '@/lib/project-utils'
 
+function getCurrentStageInfo(project: Project, teams: Team[]) {
+  if (project.stages.length === 0) return null
+  const sorted = [...project.stages].sort((a, b) => a.order - b.order)
+  const activeStage = sorted.find((s) => s.status !== 'completed')
+  if (!activeStage) return null
+  const stepNum = sorted.indexOf(activeStage) + 1
+
+  if (activeStage.status === 'reviewing') {
+    const nextReviewer = [...(activeStage.reviewers ?? [])]
+      .sort((a, b) => a.order - b.order)
+      .find((r) => !r.checkedAt)
+    if (nextReviewer) {
+      const team = teams.find((t) => t.id === nextReviewer.teamId)
+      if (team) return { stageName: activeStage.name, stepNum, team, isReviewer: true }
+    }
+  }
+
+  const team = teams.find((t) => t.id === activeStage.teamId)
+  if (!team) return null
+  return { stageName: activeStage.name, stepNum, team, isReviewer: false }
+}
+
 export default function DashboardPage() {
   const { isDark, toggle: toggleDark } = useDarkMode()
   const { t, locale, setLocale } = useLanguage()
@@ -230,10 +252,11 @@ export default function DashboardPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-gray-50 border-b border-gray-200 text-xs text-gray-500 uppercase tracking-wide">
-                    <th className="text-left px-5 py-3 font-medium">{t.caseName}</th>
+                    <th className="text-left px-5 py-3 font-medium w-64">{t.caseName}</th>
                     <th className="text-left px-5 py-3 font-medium">{t.description}</th>
-                    <th className="text-left px-5 py-3 font-medium">{t.status}</th>
-                    <th className="text-left px-5 py-3 font-medium">{t.progress}</th>
+                    <th className="text-left px-5 py-3 font-medium w-48">{t.status}</th>
+                    <th className="text-left px-5 py-3 font-medium w-56">{t.currentStage}</th>
+                    <th className="text-left px-5 py-3 font-medium w-24">{t.progress}</th>
                     <th className="text-left px-5 py-3 font-medium">{t.createdAt}</th>
                     <th className="px-5 py-3" />
                   </tr>
@@ -252,13 +275,15 @@ export default function DashboardPage() {
                     const doneCount = p.stages.filter((s: Stage) => s.status === 'completed').length
                     const progress = p.stages.length > 0 ? (doneCount / p.stages.length) * 100 : 0
 
+                    const stageInfo = getCurrentStageInfo(p, teams)
+
                     return (
                       <tr key={p.id} className={`transition-colors ${
                         problemCount > 0 ? 'bg-orange-50 hover:bg-orange-100' :
                         overdueCount > 0 ? 'bg-red-50 hover:bg-red-100' :
                         'hover:bg-gray-50'
                       }`}>
-                        <td className="px-5 py-4">
+                        <td className="px-5 py-4 w-64">
                           <Link href={`/projects/${p.id}`}
                             className="font-semibold text-gray-900 hover:text-blue-600 transition-colors">
                             {p.name}
@@ -277,7 +302,7 @@ export default function DashboardPage() {
                         <td className="px-5 py-4 text-gray-400 max-w-xs truncate">
                           {p.description || <span className="text-gray-300">—</span>}
                         </td>
-                        <td className="px-5 py-4">
+                        <td className="px-5 py-4 w-48">
                           <div className="flex flex-wrap gap-1 items-center">
                             <span className={`text-xs font-medium px-2 py-1 rounded-full ${stat.bg} ${stat.color}`}>
                               {stat.label}
@@ -294,9 +319,27 @@ export default function DashboardPage() {
                             )}
                           </div>
                         </td>
-                        <td className="px-5 py-4">
+                        <td className="px-5 py-4 w-56 min-w-[14rem]">
+                          {stageInfo ? (
+                            <div>
+                              <div className="text-xs text-gray-500 mb-0.5 whitespace-nowrap overflow-hidden text-ellipsis max-w-[13rem]">
+                                {stageInfo.stepNum}. {stageInfo.stageName}
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: stageInfo.team.color }} />
+                                <span className="text-xs font-medium text-gray-700">{stageInfo.team.name}</span>
+                                {stageInfo.isReviewer && (
+                                  <span className="text-xs text-purple-500 bg-purple-50 px-1 rounded">確認</span>
+                                )}
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-gray-300">—</span>
+                          )}
+                        </td>
+                        <td className="px-5 py-4 w-24">
                           <div className="flex items-center gap-2">
-                            <div className="w-24 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                            <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
                               <div
                                 className={`h-full rounded-full ${problemCount > 0 ? 'bg-orange-400' : overdueCount > 0 ? 'bg-red-500' : progress === 100 ? 'bg-green-500' : 'bg-blue-500'}`}
                                 style={{ width: `${Math.max(progress, 3)}%` }}
@@ -335,6 +378,7 @@ export default function DashboardPage() {
                 const problemCount = problemStages.length
                 const doneCount = p.stages.filter((s: Stage) => s.status === 'completed').length
                 const progress = p.stages.length > 0 ? (doneCount / p.stages.length) * 100 : 0
+                const stageInfo = getCurrentStageInfo(p, teams)
 
                 return (
                   <div key={p.id} className={`rounded-xl border shadow-sm p-4 ${
@@ -379,6 +423,19 @@ export default function DashboardPage() {
                         <span className="text-xs text-orange-600 font-semibold">{t.problemCount(problemCount)}</span>
                       )}
                     </div>
+
+                    {stageInfo && (
+                      <div className="mt-2 flex items-center gap-1.5 bg-gray-50 rounded-lg px-2.5 py-1.5">
+                        <span className="text-xs text-gray-400 flex-shrink-0">{stageInfo.stepNum}.</span>
+                        <span className="text-xs text-gray-600 truncate">{stageInfo.stageName}</span>
+                        <span className="text-gray-300 flex-shrink-0">›</span>
+                        <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: stageInfo.team.color }} />
+                        <span className="text-xs font-medium text-gray-700 truncate">{stageInfo.team.name}</span>
+                        {stageInfo.isReviewer && (
+                          <span className="text-xs text-purple-500 bg-purple-50 px-1 rounded flex-shrink-0">確認</span>
+                        )}
+                      </div>
+                    )}
 
                     <div className="mt-3 flex items-center gap-2">
                       <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">

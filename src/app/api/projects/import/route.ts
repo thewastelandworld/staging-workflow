@@ -7,12 +7,16 @@ import { log } from '@/lib/logger'
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16']
 
+type ParsedReviewer = {
+  teamName: string
+  checkContent: string
+}
+
 type ParsedStage = {
   name: string
   description: string
   teamName: string
-  reviewerTeamName: string
-  reviewerCheckContent: string
+  reviewers: ParsedReviewer[]
   deadline: string
 }
 
@@ -25,6 +29,34 @@ type ParsedProject = {
 const DEFAULT_DEADLINE = () =>
   new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
 
+// Detect all (確認チーム*, 確認内容*) column index pairs from a header row.
+// Handles: 確認チーム①/②/③, 確認チーム1/2/3, reviewer1/2/3, and plain 確認チーム.
+function findReviewerColumns(headers: string[]): { teamCol: number; contentCol: number }[] {
+  const pairs: { teamCol: number; contentCol: number }[] = []
+
+  headers.forEach((h, i) => {
+    const isTeamCol =
+      (h.includes('確認チーム') || (h.includes('reviewer') && !h.includes('content') && !h.includes('check')))
+    if (!isTeamCol) return
+
+    // Extract suffix (e.g. '①', '1', '' )
+    const suffix = h.replace(/確認チーム|reviewer/gi, '').trim()
+
+    // Find matching content column: must come after, must contain suffix if suffix is non-empty
+    const contentIdx = headers.findIndex((ch, ci) => {
+      if (ci <= i) return false
+      const isContent = ch.includes('確認内容') || ch.includes('check_content') || ch.includes('check content')
+      if (!isContent) return false
+      if (suffix === '') return true
+      return ch.includes(suffix)
+    })
+
+    pairs.push({ teamCol: i, contentCol: contentIdx })
+  })
+
+  return pairs
+}
+
 // ── Parser A: our app's template format (single sheet, title in row 1) ──────
 function parseTemplateSheet(rows: unknown[][]): ParsedProject {
   // xlsx shifts empty leading columns, so column B becomes index 0
@@ -35,6 +67,9 @@ function parseTemplateSheet(rows: unknown[][]): ParsedProject {
   )
   if (headerRowIdx === -1) throw new Error('ヘッダー行が見つかりません')
 
+  const headers = (rows[headerRowIdx] ?? []).map((h) => String(h).trim().toLowerCase())
+  const reviewerCols = findReviewerColumns(headers)
+
   const deadline = DEFAULT_DEADLINE()
   const stages: ParsedStage[] = rows
     .slice(headerRowIdx + 1)
@@ -43,8 +78,12 @@ function parseTemplateSheet(rows: unknown[][]): ParsedProject {
       name: String(r[1]).trim(),
       description: String(r[2] ?? '').trim(),
       teamName: String(r[3] ?? '').trim(),
-      reviewerTeamName: String(r[4] ?? '').trim(),
-      reviewerCheckContent: '',
+      reviewers: reviewerCols
+        .map(({ teamCol, contentCol }) => ({
+          teamName: String(r[teamCol] ?? '').trim(),
+          checkContent: contentCol !== -1 ? String(r[contentCol] ?? '').trim() : '',
+        }))
+        .filter((rv) => rv.teamName),
       deadline,
     }))
 
@@ -74,14 +113,14 @@ function parsePerSheet(sheetName: string, rows: unknown[][]): ParsedProject {
     return -1
   }
 
-  const nameCol         = colOf('ステージ名', '名前', 'stage', 'name')
-  const descCol         = colOf('説明', 'description')           // '内容' alone would match '確認内容'
-  const teamCol         = colOf('担当チーム', '担当', 'team')
-  const reviewerCol     = colOf('確認チーム', 'reviewer')
-  const checkContentCol = colOf('確認内容', 'check_content', 'check content')
-  const deadlineCol     = colOf('期限', 'deadline', '締切')
+  const nameCol    = colOf('ステージ名', '名前', 'stage', 'name')
+  const descCol    = colOf('説明', 'description')           // '内容' alone would match '確認内容'
+  const teamCol    = colOf('担当チーム', '担当', 'team')
+  const deadlineCol = colOf('期限', 'deadline', '締切')
 
   if (nameCol === -1) throw new Error(`シート「${sheetName}」に「ステージ名」列が見つかりません`)
+
+  const reviewerCols = findReviewerColumns(headers)
 
   const deadline = DEFAULT_DEADLINE()
   const stages: ParsedStage[] = rows
@@ -91,8 +130,12 @@ function parsePerSheet(sheetName: string, rows: unknown[][]): ParsedProject {
       name: String(r[nameCol]).trim(),
       description: descCol !== -1 ? String(r[descCol] ?? '').trim() : '',
       teamName: teamCol !== -1 ? String(r[teamCol] ?? '').trim() : '',
-      reviewerTeamName: reviewerCol !== -1 ? String(r[reviewerCol] ?? '').trim() : '',
-      reviewerCheckContent: checkContentCol !== -1 ? String(r[checkContentCol] ?? '').trim() : '',
+      reviewers: reviewerCols
+        .map(({ teamCol: tc, contentCol: cc }) => ({
+          teamName: String(r[tc] ?? '').trim(),
+          checkContent: cc !== -1 ? String(r[cc] ?? '').trim() : '',
+        }))
+        .filter((rv) => rv.teamName),
       deadline: deadlineCol !== -1 && r[deadlineCol]
         ? (() => { try { return new Date(String(r[deadlineCol])).toISOString() } catch { return deadline } })()
         : deadline,
@@ -157,13 +200,14 @@ async function createProject(
     })
     if (stageErr) continue
 
-    if (s.reviewerTeamName) {
-      const reviewerId = await resolveTeam(s.reviewerTeamName, teamMap, colorIndex)
+    for (let ri = 0; ri < s.reviewers.length; ri++) {
+      const rv = s.reviewers[ri]
+      const reviewerId = await resolveTeam(rv.teamName, teamMap, colorIndex)
       await getSupabase().from('stage_reviewers').insert({
         stage_id: stageId,
         team_id: reviewerId,
-        order: 1,
-        check_content: s.reviewerCheckContent || null,
+        order: ri + 1,
+        check_content: rv.checkContent || null,
         checked_at: null,
         note: null,
       })

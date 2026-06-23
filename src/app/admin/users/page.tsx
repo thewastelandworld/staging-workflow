@@ -10,18 +10,26 @@ interface User {
   username: string
   display_name: string | null
   email: string | null
-  permission: 'admin' | 'user' | 'readonly'
+  permission: 'admin' | 'team_leader' | 'user' | 'readonly'
   status: 'pending' | 'approved' | null
+}
+
+interface TeamInfo {
+  id: string
+  name: string
+  color: string
 }
 
 const PERMISSION_LABEL: Record<string, string> = {
   admin: '管理員',
+  team_leader: 'チームリーダー',
   user: '使用者',
   readonly: '読み取り専用',
 }
 
 const PERMISSION_STYLE: Record<string, string> = {
   admin: 'bg-blue-100 text-blue-700',
+  team_leader: 'bg-purple-100 text-purple-700',
   user: 'bg-green-100 text-green-700',
   readonly: 'bg-yellow-100 text-yellow-700',
 }
@@ -30,6 +38,7 @@ export default function AdminUsersPage() {
   const { session, loading: sessionLoading } = useSession()
   const router = useRouter()
   const [users, setUsers] = useState<User[]>([])
+  const [userTeams, setUserTeams] = useState<Record<string, TeamInfo[]>>({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState<string | null>(null)
@@ -40,9 +49,24 @@ export default function AdminUsersPage() {
 
   async function load() {
     setLoading(true)
-    const res = await fetch('/api/admin/users')
-    if (res.ok) {
-      setUsers(await res.json())
+    const [usersRes, teamsRes] = await Promise.all([
+      fetch('/api/admin/users'),
+      fetch('/api/teams'),
+    ])
+    if (usersRes.ok) {
+      const usersData: User[] = await usersRes.json()
+      setUsers(usersData)
+      if (teamsRes.ok) {
+        const teamsData: { id: string; name: string; color: string; members: { id: string }[] }[] = await teamsRes.json()
+        const map: Record<string, TeamInfo[]> = {}
+        for (const team of teamsData) {
+          for (const member of team.members) {
+            if (!map[member.id]) map[member.id] = []
+            map[member.id].push({ id: team.id, name: team.name, color: team.color })
+          }
+        }
+        setUserTeams(map)
+      }
     } else {
       setError('ユーザー一覧の取得に失敗しました')
     }
@@ -195,7 +219,7 @@ export default function AdminUsersPage() {
           </div>
 
           <div className="mb-4 px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-500">
-            権限変更は <span className="font-medium text-green-700">使用者</span> と <span className="font-medium text-yellow-700">読み取り専用</span> のみ変更できます。<span className="font-medium text-blue-700">管理員</span> への変更はできません。
+            権限変更は <span className="font-medium text-green-700">使用者</span>・<span className="font-medium text-yellow-700">読み取り専用</span> のみ設定できます。<span className="font-medium text-blue-700">管理員</span> への変更はできません。チームリーダーの指定はチーム管理画面から行ってください。
           </div>
 
           {approved.length === 0 ? (
@@ -211,6 +235,7 @@ export default function AdminUsersPage() {
                     <th className="text-left px-5 py-3 font-medium">ユーザー</th>
                     <th className="text-left px-5 py-3 font-medium">メール</th>
                     <th className="text-left px-5 py-3 font-medium">権限</th>
+                    <th className="text-left px-5 py-3 font-medium">所属チーム</th>
                     <th className="px-5 py-3" />
                   </tr>
                 </thead>
@@ -220,6 +245,7 @@ export default function AdminUsersPage() {
                     const isAdmin = user.permission === 'admin'
                     const isBusy = busy === user.id
                     const canEdit = !isSelf && !isAdmin
+                    const teams = userTeams[user.id] ?? []
 
                     return (
                       <tr key={user.id} className="hover:bg-gray-50 transition-colors">
@@ -237,6 +263,23 @@ export default function AdminUsersPage() {
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${PERMISSION_STYLE[user.permission]}`}>
                             {PERMISSION_LABEL[user.permission]}
                           </span>
+                        </td>
+                        <td className="px-5 py-4">
+                          {teams.length === 0 ? (
+                            <span className="text-xs text-gray-300">—</span>
+                          ) : (
+                            <div className="flex flex-wrap gap-1">
+                              {teams.map(team => (
+                                <span key={team.id} className="inline-flex items-center gap-1 text-xs px-2 py-0.5 bg-gray-50 border border-gray-200 rounded-full text-gray-600">
+                                  <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: team.color }} />
+                                  {team.name}
+                                  {user.permission === 'team_leader' && (
+                                    <span className="text-purple-500 font-medium">★</span>
+                                  )}
+                                </span>
+                              ))}
+                            </div>
+                          )}
                         </td>
                         <td className="px-5 py-4">
                           <div className="flex items-center justify-end gap-2">

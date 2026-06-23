@@ -1,6 +1,6 @@
 import 'server-only'
 
-export type Permission = 'admin' | 'user' | 'readonly'
+export type Permission = 'admin' | 'team_leader' | 'user' | 'readonly'
 export interface Session { user: string; permission: Permission; exp: number }
 
 function secret() {

@@ -4,9 +4,9 @@ import { v4 as uuid } from 'uuid'
 import { toTeam } from '@/lib/mappers'
 import { cacheLife, cacheTag, revalidateTag } from 'next/cache'
 import { log } from '@/lib/logger'
-import { assertWritable } from '@/lib/auth'
+import { assertAdmin } from '@/lib/auth'
 
-const MEMBER_SELECT = 'user_teams(role, users(id, username, display_name, email))'
+const MEMBER_SELECT = 'user_teams(role, users(id, username, display_name, email, permission))'
 
 async function fetchTeams() {
   'use cache'
@@ -30,7 +30,7 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const deny = await assertWritable()
+  const deny = await assertAdmin()
   if (deny) return deny
   const body = await req.json()
   const { data: existing } = await getSupabase().from('teams').select('id')

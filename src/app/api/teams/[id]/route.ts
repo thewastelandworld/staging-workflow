@@ -3,11 +3,18 @@ import { getSupabase } from '@/lib/supabase'
 import { toTeam } from '@/lib/mappers'
 import { revalidateTag } from 'next/cache'
 import { log } from '@/lib/logger'
-import { assertWritable } from '@/lib/auth'
+import { assertWritable, assertAdmin, getSession } from '@/lib/auth'
 
 type Params = { params: Promise<{ id: string }> }
 
-const MEMBER_SELECT = 'user_teams(role, users(id, username, display_name, email))'
+const MEMBER_SELECT = 'user_teams(role, users(id, username, display_name, email, permission))'
+
+async function getCallerTeamIds(username: string): Promise<string[]> {
+  const { data: user } = await getSupabase().from('users').select('id').eq('username', username).maybeSingle()
+  if (!user) return []
+  const { data: ut } = await getSupabase().from('user_teams').select('team_id').eq('user_id', user.id)
+  return (ut ?? []).map((r) => r.team_id as string)
+}
 
 export async function PATCH(req: Request, { params }: Params) {
   const deny = await assertWritable()
@@ -30,7 +37,7 @@ export async function PATCH(req: Request, { params }: Params) {
 }
 
 export async function DELETE(_req: Request, { params }: Params) {
-  const deny = await assertWritable()
+  const deny = await assertAdmin()
   if (deny) return deny
   const { id } = await params
   // user_teams entries are removed automatically via ON DELETE CASCADE
@@ -46,9 +53,23 @@ export async function DELETE(_req: Request, { params }: Params) {
 
 // Add a member to a team by username
 export async function POST(req: Request, { params }: Params) {
-  const deny = await assertWritable()
-  if (deny) return deny
+  const session = await getSession()
+  if (!session || session.permission === 'readonly') {
+    return NextResponse.json({ error: 'Read-only access' }, { status: 403 })
+  }
   const { id } = await params
+
+  // team_leader can only add members to their own teams
+  if (session.permission !== 'admin') {
+    if (session.permission !== 'team_leader') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+    const teamIds = await getCallerTeamIds(session.user)
+    if (!teamIds.includes(id)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+  }
+
   const body = await req.json()
 
   const { data: teamRow } = await getSupabase()

@@ -25,6 +25,9 @@ export default function TeamsPage() {
   const { t, locale, setLocale } = useLanguage()
   const { session, loading: sessionLoading, logout } = useSession()
   const isReadOnly = !sessionLoading && session?.permission === 'readonly'
+  const isAdmin = !sessionLoading && session?.permission === 'admin'
+  const isTeamLeader = !sessionLoading && session?.permission === 'team_leader'
+  const userTeamIds = session?.teamIds ?? []
   const [teams, setTeams] = useState<Team[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -35,6 +38,7 @@ export default function TeamsPage() {
   const [memberForms, setMemberForms] = useState<Record<string, { userId: string; role: string; query: string; open: boolean }>>({})
   const [expandedTeam, setExpandedTeam] = useState<string | null>(null)
   const [allUsers, setAllUsers] = useState<UserOption[]>([])
+  const [leaderBusy, setLeaderBusy] = useState<string | null>(null)
   const comboRefs = useRef<Record<string, HTMLDivElement | null>>({})
 
   async function load() {
@@ -95,6 +99,22 @@ export default function TeamsPage() {
     load()
   }
 
+  async function setLeader(userId: string, makeLeader: boolean) {
+    setLeaderBusy(userId)
+    const res = await fetch(`/api/admin/users/${userId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ permission: makeLeader ? 'team_leader' : 'user' }),
+    })
+    setLeaderBusy(null)
+    if (!res.ok) {
+      const data = await res.json()
+      alert(data.error ?? '権限変更に失敗しました')
+      return
+    }
+    load()
+  }
+
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center">
       <div className="text-gray-400 animate-pulse">{t.loading}</div>
@@ -141,7 +161,7 @@ export default function TeamsPage() {
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         {/* Add team form */}
-        {!isReadOnly && <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 mb-6">
+        {isAdmin && <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 mb-6">
           <h2 className="font-semibold text-gray-900 mb-4">{t.addNewTeam}</h2>
           <form onSubmit={createTeam}>
             <div className="flex flex-wrap gap-3 items-end">
@@ -203,7 +223,9 @@ export default function TeamsPage() {
                   )
                 : availableUsers
 
-              return (
+              const canManageMembers = isAdmin || (isTeamLeader && userTeamIds.includes(team.id))
+
+            return (
                 <div key={team.id} className="bg-white rounded-xl border border-gray-200 shadow-sm">
                   {/* Team header */}
                   <div
@@ -215,7 +237,7 @@ export default function TeamsPage() {
                       <span className="font-semibold text-gray-900">{team.name}</span>
                       <span className="ml-2 text-sm text-gray-400">{t.membersCount(team.members.length)}</span>
                     </div>
-                    {!isReadOnly && (
+                    {isAdmin && (
                       <button
                         onClick={(e) => { e.stopPropagation(); deleteTeam(team.id) }}
                         className="text-gray-300 hover:text-red-400 text-sm transition-colors mr-2"
@@ -235,29 +257,53 @@ export default function TeamsPage() {
                           <p className="text-sm text-gray-400">{t.noMembers}</p>
                         ) : (
                           <div className="space-y-2">
-                            {team.members.map((m) => (
-                              <div key={m.id} className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2">
-                                <div>
-                                  <span className="text-sm font-medium text-gray-800">{m.name}</span>
-                                  {m.role && <span className="ml-2 text-xs text-gray-400 bg-white border border-gray-200 px-1.5 py-0.5 rounded">{m.role}</span>}
-                                  <div className="text-xs text-gray-400 mt-0.5">{m.email}</div>
+                            {team.members.map((m) => {
+                              const isLeader = m.permission === 'team_leader'
+                              const isBusy = leaderBusy === m.id
+                              return (
+                                <div key={m.id} className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2">
+                                  <div>
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="text-sm font-medium text-gray-800">{m.name}</span>
+                                      {isLeader && (
+                                        <span className="text-xs bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded font-medium">リーダー</span>
+                                      )}
+                                      {m.role && <span className="text-xs text-gray-400 bg-white border border-gray-200 px-1.5 py-0.5 rounded">{m.role}</span>}
+                                    </div>
+                                    <div className="text-xs text-gray-400 mt-0.5">{m.email}</div>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    {isAdmin && (
+                                      <button
+                                        onClick={() => setLeader(m.id, !isLeader)}
+                                        disabled={isBusy}
+                                        className={`text-xs px-2 py-0.5 rounded border transition-colors disabled:opacity-40 ${
+                                          isLeader
+                                            ? 'text-purple-600 border-purple-300 hover:bg-purple-50'
+                                            : 'text-gray-500 border-gray-300 hover:bg-gray-100'
+                                        }`}
+                                      >
+                                        {isBusy ? '...' : isLeader ? 'リーダー解除' : 'リーダーに指定'}
+                                      </button>
+                                    )}
+                                    {canManageMembers && (
+                                      <button
+                                        onClick={() => removeMember(team.id, m.id)}
+                                        className="text-gray-300 hover:text-red-400 text-sm transition-colors"
+                                      >
+                                        ✕
+                                      </button>
+                                    )}
+                                  </div>
                                 </div>
-                                {!isReadOnly && (
-                                  <button
-                                    onClick={() => removeMember(team.id, m.id)}
-                                    className="text-gray-300 hover:text-red-400 text-sm transition-colors"
-                                  >
-                                    ✕
-                                  </button>
-                                )}
-                              </div>
-                            ))}
+                              )
+                            })}
                           </div>
                         )}
                       </div>
 
                       {/* Add member form */}
-                      {!isReadOnly && <div className="border-t border-gray-100 pt-4">
+                      {canManageMembers && <div className="border-t border-gray-100 pt-4">
                         <h3 className="text-sm font-medium text-gray-700 mb-2">{t.addMemberLabel}</h3>
                         {availableUsers.length === 0 ? (
                           <p className="text-sm text-gray-400">{t.noAvailableUsers}</p>

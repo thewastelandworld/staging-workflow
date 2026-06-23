@@ -73,7 +73,7 @@ export function toProject(row: Record<string, unknown>): Project {
 
 type UserTeamRow = {
   role: string | null
-  users: { id: string; username: string; display_name: string | null; email: string | null }
+  users: { id: string; username: string; display_name: string | null; email: string | null; permission: string | null }
 }
 
 export function toTeam(row: Record<string, unknown>): Team {
@@ -89,6 +89,7 @@ export function toTeam(row: Record<string, unknown>): Team {
       name: ut.users.display_name ?? ut.users.username,
       email: ut.users.email ?? '',
       role: ut.role ?? undefined,
+      permission: ut.users.permission ?? undefined,
     })),
   }
 }
