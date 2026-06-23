@@ -53,6 +53,23 @@ export default function TeamsPage() {
   function saveImportResult(result: typeof importResult) {
     setImportResult(result)
   }
+
+  // Clear import result when navigating away (App Router caches client state)
+  useEffect(() => {
+    const clear = () => setImportResult(null)
+
+    const originalPushState = window.history.pushState.bind(window.history)
+    window.history.pushState = (...args) => {
+      clear()
+      return originalPushState(...args)
+    }
+    window.addEventListener('popstate', clear)
+
+    return () => {
+      window.history.pushState = originalPushState
+      window.removeEventListener('popstate', clear)
+    }
+  }, [])
   const comboRefs = useRef<Record<string, HTMLDivElement | null>>({})
 
   async function load() {
