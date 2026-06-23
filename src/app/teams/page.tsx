@@ -47,8 +47,21 @@ export default function TeamsPage() {
     skipped: number
     usersCreated: { username: string; password: string }[]
     invalidUsernames: string[]
-  }[] | null>(null)
+  }[] | null>(() => {
+    try {
+      const saved = sessionStorage.getItem('teamImportResult')
+      return saved ? JSON.parse(saved) : null
+    } catch { return null }
+  })
   const [importError, setImportError] = useState<string | null>(null)
+
+  function saveImportResult(result: typeof importResult) {
+    setImportResult(result)
+    try {
+      if (result) sessionStorage.setItem('teamImportResult', JSON.stringify(result))
+      else sessionStorage.removeItem('teamImportResult')
+    } catch { /* ignore */ }
+  }
   const comboRefs = useRef<Record<string, HTMLDivElement | null>>({})
 
   async function load() {
@@ -140,7 +153,7 @@ export default function TeamsPage() {
     if (!res.ok) {
       setImportError(data.error ?? 'インポートに失敗しました')
     } else {
-      setImportResult(data.results)
+      saveImportResult(data.results)
       load()
     }
   }
@@ -201,7 +214,7 @@ export default function TeamsPage() {
           <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium text-green-800">インポート完了</span>
-              <button onClick={() => setImportResult(null)} className="text-green-400 hover:text-green-600">✕</button>
+              <button onClick={() => saveImportResult(null)} className="text-green-400 hover:text-green-600">✕</button>
             </div>
             <div className="space-y-2">
               {importResult.map((r, i) => (
