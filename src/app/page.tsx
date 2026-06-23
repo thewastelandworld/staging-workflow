@@ -184,10 +184,21 @@ export default function DashboardPage() {
           <h2 className="text-base sm:text-lg font-semibold text-gray-900">{t.caseList}</h2>
           {canAdd && (
             <div className="flex items-center gap-2">
-              <label className={`px-3 sm:px-4 py-2 rounded-lg text-sm border border-blue-300 text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer ${importing ? 'opacity-50 pointer-events-none' : ''}`}>
-                {importing ? 'インポート中...' : 'Excelインポート'}
-                <input type="file" accept=".xlsx,.xls" className="hidden" onChange={importExcel} disabled={importing} />
-              </label>
+              <div className="relative group">
+                <label className={`px-3 sm:px-4 py-2 rounded-lg text-sm border border-blue-300 text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer flex items-center gap-1.5 ${importing ? 'opacity-50 pointer-events-none' : ''}`}>
+                  {importing ? 'インポート中...' : 'Excelインポート'}
+                  <input type="file" accept=".xlsx,.xls" className="hidden" onChange={importExcel} disabled={importing} />
+                </label>
+                <div className="absolute right-0 top-full mt-1 hidden group-hover:flex flex-col bg-white border border-gray-200 rounded-lg shadow-lg z-20 py-1 min-w-max text-xs">
+                  <span className="px-3 py-1.5 text-gray-400 font-medium border-b border-gray-100">サンプルファイル</span>
+                  <a href="/sample_import.xlsx" download className="px-3 py-2 text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+                    <span>↓</span> 確認チーム複数列（推奨）
+                  </a>
+                  <a href="/sample_import_mansion.xlsx" download className="px-3 py-2 text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+                    <span>↓</span> マンション購入フロー
+                  </a>
+                </div>
+              </div>
               <button
                 onClick={() => setShowForm(!showForm)}
                 className="px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition-colors"
