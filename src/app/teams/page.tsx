@@ -39,6 +39,9 @@ export default function TeamsPage() {
   const [expandedTeam, setExpandedTeam] = useState<string | null>(null)
   const [allUsers, setAllUsers] = useState<UserOption[]>([])
   const [leaderBusy, setLeaderBusy] = useState<string | null>(null)
+  const [importing, setImporting] = useState(false)
+  const [importResult, setImportResult] = useState<{ teamName: string; created: boolean; added: number; skipped: number; notFound: string[] }[] | null>(null)
+  const [importError, setImportError] = useState<string | null>(null)
   const comboRefs = useRef<Record<string, HTMLDivElement | null>>({})
 
   async function load() {
@@ -115,6 +118,26 @@ export default function TeamsPage() {
     load()
   }
 
+  async function importExcel(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setImporting(true)
+    setImportResult(null)
+    setImportError(null)
+    const fd = new FormData()
+    fd.append('file', file)
+    const res = await fetch('/api/teams/import', { method: 'POST', body: fd })
+    const data = await res.json()
+    setImporting(false)
+    if (!res.ok) {
+      setImportError(data.error ?? 'インポートに失敗しました')
+    } else {
+      setImportResult(data.results)
+      load()
+    }
+  }
+
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center">
       <div className="text-gray-400 animate-pulse">{t.loading}</div>
@@ -160,6 +183,35 @@ export default function TeamsPage() {
       </header>
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+        {/* Import result */}
+        {importError && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center justify-between">
+            <span className="text-sm text-red-700">{importError}</span>
+            <button onClick={() => setImportError(null)} className="text-red-400 hover:text-red-600 ml-3">✕</button>
+          </div>
+        )}
+        {importResult && (
+          <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-green-800">インポート完了</span>
+              <button onClick={() => setImportResult(null)} className="text-green-400 hover:text-green-600">✕</button>
+            </div>
+            <div className="space-y-1">
+              {importResult.map((r, i) => (
+                <div key={i} className="text-xs text-green-700">
+                  <span className="font-medium">{r.teamName}</span>
+                  {r.created && <span className="ml-1 text-green-600">（新規作成）</span>}
+                  <span className="ml-2">追加: {r.added}名</span>
+                  {r.skipped > 0 && <span className="ml-1 text-gray-500">・スキップ: {r.skipped}名</span>}
+                  {r.notFound.length > 0 && (
+                    <span className="ml-1 text-orange-600">・未登録ユーザー: {r.notFound.join(', ')}</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Add team form */}
         {isAdmin && <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 mb-6">
           <h2 className="font-semibold text-gray-900 mb-4">{t.addNewTeam}</h2>
@@ -198,6 +250,20 @@ export default function TeamsPage() {
               >
                 {creatingTeam ? t.adding : `+ ${t.add}`}
               </button>
+              <div className="flex items-center">
+                <label className={`px-4 py-2 border border-gray-300 text-gray-600 rounded-l-lg text-sm hover:bg-gray-50 cursor-pointer transition-colors ${importing ? 'opacity-50 pointer-events-none' : ''}`}>
+                  {importing ? 'インポート中...' : 'Excelインポート'}
+                  <input type="file" accept=".xlsx,.xls" className="hidden" onChange={importExcel} disabled={importing} />
+                </label>
+                <a
+                  href="/sample_team_import.xlsx"
+                  download
+                  className="px-2 py-2 border border-l-0 border-gray-300 rounded-r-lg text-xs text-gray-400 hover:bg-gray-50 hover:text-gray-600 transition-colors"
+                  title="サンプルファイルをダウンロード"
+                >
+                  ↓サンプル
+                </a>
+              </div>
             </div>
           </form>
         </div>}
