@@ -50,19 +50,8 @@ export default function TeamsPage() {
   }[] | null>(null)
   const [importError, setImportError] = useState<string | null>(null)
 
-  useEffect(() => {
-    try {
-      const saved = sessionStorage.getItem('teamImportResult')
-      if (saved) setImportResult(JSON.parse(saved))
-    } catch { /* ignore */ }
-  }, [])
-
   function saveImportResult(result: typeof importResult) {
     setImportResult(result)
-    try {
-      if (result) sessionStorage.setItem('teamImportResult', JSON.stringify(result))
-      else sessionStorage.removeItem('teamImportResult')
-    } catch { /* ignore */ }
   }
   const comboRefs = useRef<Record<string, HTMLDivElement | null>>({})
 
