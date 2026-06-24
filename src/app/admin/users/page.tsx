@@ -235,7 +235,7 @@ export default function AdminUsersPage() {
                     <th className="text-left px-5 py-3 font-medium">ユーザー</th>
                     <th className="text-left px-5 py-3 font-medium">メール</th>
                     <th className="text-left px-5 py-3 font-medium w-40">権限</th>
-                    <th className="text-left px-5 py-3 font-medium">所属チーム</th>
+                    <th className="text-left px-5 py-3 font-medium w-64">所属チーム</th>
                     <th className="px-5 py-3" />
                   </tr>
                 </thead>
