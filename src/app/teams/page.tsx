@@ -39,7 +39,7 @@ export default function TeamsPage() {
   const [expandedTeam, setExpandedTeam] = useState<string | null>(null)
   const [allUsers, setAllUsers] = useState<UserOption[]>([])
   const [leaderBusy, setLeaderBusy] = useState<string | null>(null)
-  const [editingRole, setEditingRole] = useState<{ teamId: string; userId: string; value: string } | null>(null)
+  const [editingRole, setEditingRole] = useState<{ teamId: string; userId: string; value: string; original: string } | null>(null)
   const [roleBusy, setRoleBusy] = useState<string | null>(null)
   const [importing, setImporting] = useState(false)
   const [importResult, setImportResult] = useState<{
@@ -150,7 +150,8 @@ export default function TeamsPage() {
     load()
   }
 
-  async function updateRole(teamId: string, userId: string, role: string) {
+  async function updateRole(teamId: string, userId: string, role: string, original: string) {
+    if (role === original) { setEditingRole(null); return }
     setRoleBusy(userId)
     const res = await fetch(`/api/teams/${teamId}/members/${userId}`, {
       method: 'PATCH',
@@ -412,17 +413,17 @@ export default function TeamsPage() {
                                           value={editingRole.value}
                                           onChange={(e) => setEditingRole({ ...editingRole, value: e.target.value })}
                                           onKeyDown={(e) => {
-                                            if (e.key === 'Enter') updateRole(team.id, m.id, editingRole.value)
+                                            if (e.key === 'Enter') updateRole(team.id, m.id, editingRole.value, editingRole.original)
                                             if (e.key === 'Escape') setEditingRole(null)
                                           }}
-                                          onBlur={() => updateRole(team.id, m.id, editingRole.value)}
+                                          onBlur={() => updateRole(team.id, m.id, editingRole.value, editingRole.original)}
                                           disabled={roleBusy === m.id}
                                           placeholder="役割を入力"
                                         />
                                       ) : (
                                         canManageMembers ? (
                                           <button
-                                            onClick={() => setEditingRole({ teamId: team.id, userId: m.id, value: m.role ?? '' })}
+                                            onClick={() => setEditingRole({ teamId: team.id, userId: m.id, value: m.role ?? '', original: m.role ?? '' })}
                                             className="text-xs text-gray-400 bg-white border border-gray-200 px-1.5 py-0.5 rounded hover:border-blue-300 hover:text-blue-500 transition-colors"
                                           >
                                             {m.role || '役割を追加'}
