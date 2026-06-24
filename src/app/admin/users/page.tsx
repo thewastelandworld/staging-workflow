@@ -234,7 +234,7 @@ export default function AdminUsersPage() {
                   <tr className="bg-gray-50 border-b border-gray-200 text-xs text-gray-500 uppercase tracking-wide">
                     <th className="text-left px-5 py-3 font-medium">ユーザー</th>
                     <th className="text-left px-5 py-3 font-medium">メール</th>
-                    <th className="text-left px-5 py-3 font-medium">権限</th>
+                    <th className="text-left px-5 py-3 font-medium w-40">権限</th>
                     <th className="text-left px-5 py-3 font-medium">所属チーム</th>
                     <th className="px-5 py-3" />
                   </tr>
