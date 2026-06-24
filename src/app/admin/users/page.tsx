@@ -93,23 +93,6 @@ export default function AdminUsersPage() {
     setBusy(null)
   }
 
-  async function changePermission(user: User, newPermission: 'user') {
-    if (newPermission === user.permission) return
-    setBusy(user.id)
-    const res = await fetch(`/api/admin/users/${user.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ permission: newPermission }),
-    })
-    if (!res.ok) {
-      const data = await res.json()
-      alert(data.error ?? '権限変更に失敗しました')
-    } else {
-      setUsers(prev => prev.map(u => u.id === user.id ? { ...u, permission: newPermission } : u))
-    }
-    setBusy(null)
-  }
-
   async function deleteUser(user: User) {
     if (!confirm(`「${user.username}」を削除しますか？`)) return
     setBusy(user.id)
@@ -241,9 +224,7 @@ export default function AdminUsersPage() {
                 <tbody className="divide-y divide-gray-100">
                   {approved.map(user => {
                     const isSelf = user.username === session?.user
-                    const isAdmin = user.permission === 'admin'
                     const isBusy = busy === user.id
-                    const canEdit = !isSelf && !isAdmin && user.permission !== 'team_leader'
                     const teams = userTeams[user.id] ?? []
 
                     return (
@@ -275,28 +256,14 @@ export default function AdminUsersPage() {
                             </div>
                           )}
                         </td>
-                        <td className="px-5 py-4">
-                          <div className="flex items-center justify-end gap-2">
-                            {canEdit ? (
-                              <select
-                                value="user"
-                                disabled={isBusy}
-                                onChange={e => changePermission(user, e.target.value as 'user')}
-                                className="text-xs px-2 py-1.5 border border-gray-300 rounded-lg text-gray-600 bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-blue-400"
-                              >
-                                <option value="user">使用者</option>
-                              </select>
-                            ) : (
-                              <span className="text-xs text-gray-300 px-3 py-1.5">変更不可</span>
-                            )}
-                            <button
-                              onClick={() => deleteUser(user)}
-                              disabled={isSelf || isBusy}
-                              className="text-xs px-3 py-1.5 border border-red-200 rounded-lg text-red-500 hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                            >
-                              削除
-                            </button>
-                          </div>
+                        <td className="px-5 py-4 text-right">
+                          <button
+                            onClick={() => deleteUser(user)}
+                            disabled={isSelf || isBusy}
+                            className="text-xs px-3 py-1.5 border border-red-200 rounded-lg text-red-500 hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                          >
+                            削除
+                          </button>
                         </td>
                       </tr>
                     )
