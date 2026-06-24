@@ -39,6 +39,8 @@ export default function TeamsPage() {
   const [expandedTeam, setExpandedTeam] = useState<string | null>(null)
   const [allUsers, setAllUsers] = useState<UserOption[]>([])
   const [leaderBusy, setLeaderBusy] = useState<string | null>(null)
+  const [editingRole, setEditingRole] = useState<{ teamId: string; userId: string; value: string } | null>(null)
+  const [roleBusy, setRoleBusy] = useState<string | null>(null)
   const [importing, setImporting] = useState(false)
   const [importResult, setImportResult] = useState<{
     teamName: string
@@ -143,6 +145,23 @@ export default function TeamsPage() {
     if (!res.ok) {
       const data = await res.json()
       alert(data.error ?? '権限変更に失敗しました')
+      return
+    }
+    load()
+  }
+
+  async function updateRole(teamId: string, userId: string, role: string) {
+    setRoleBusy(userId)
+    const res = await fetch(`/api/teams/${teamId}/members/${userId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role }),
+    })
+    setRoleBusy(null)
+    setEditingRole(null)
+    if (!res.ok) {
+      const data = await res.json()
+      alert(data.error ?? '役割の更新に失敗しました')
       return
     }
     load()
@@ -380,13 +399,38 @@ export default function TeamsPage() {
                               const isBusy = leaderBusy === m.id
                               return (
                                 <div key={m.id} className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2">
-                                  <div>
-                                    <div className="flex items-center gap-1.5">
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-1.5 flex-wrap">
                                       <span className="text-sm font-medium text-gray-800">{m.name}</span>
                                       {isLeader && (
                                         <span className="text-xs bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded font-medium">リーダー</span>
                                       )}
-                                      {m.role && <span className="text-xs text-gray-400 bg-white border border-gray-200 px-1.5 py-0.5 rounded">{m.role}</span>}
+                                      {editingRole?.teamId === team.id && editingRole?.userId === m.id ? (
+                                        <input
+                                          autoFocus
+                                          className="text-xs border border-blue-400 rounded px-1.5 py-0.5 text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-400 w-28 bg-white"
+                                          value={editingRole.value}
+                                          onChange={(e) => setEditingRole({ ...editingRole, value: e.target.value })}
+                                          onKeyDown={(e) => {
+                                            if (e.key === 'Enter') updateRole(team.id, m.id, editingRole.value)
+                                            if (e.key === 'Escape') setEditingRole(null)
+                                          }}
+                                          onBlur={() => updateRole(team.id, m.id, editingRole.value)}
+                                          disabled={roleBusy === m.id}
+                                          placeholder="役割を入力"
+                                        />
+                                      ) : (
+                                        canManageMembers ? (
+                                          <button
+                                            onClick={() => setEditingRole({ teamId: team.id, userId: m.id, value: m.role ?? '' })}
+                                            className="text-xs text-gray-400 bg-white border border-gray-200 px-1.5 py-0.5 rounded hover:border-blue-300 hover:text-blue-500 transition-colors"
+                                          >
+                                            {m.role || '役割を追加'}
+                                          </button>
+                                        ) : (
+                                          m.role && <span className="text-xs text-gray-400 bg-white border border-gray-200 px-1.5 py-0.5 rounded">{m.role}</span>
+                                        )
+                                      )}
                                     </div>
                                     <div className="text-xs text-gray-400 mt-0.5">{m.email}</div>
                                   </div>
