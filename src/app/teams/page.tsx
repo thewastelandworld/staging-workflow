@@ -54,9 +54,11 @@ export default function TeamsPage() {
     setImportResult(result)
   }
 
-  // Clear import result when navigating away (App Router caches client state)
+  // Clear import result when navigating away (App Router caches client state).
+  // setState must not be called synchronously inside pushState (useInsertionEffect context),
+  // so defer it with setTimeout.
   useEffect(() => {
-    const clear = () => setImportResult(null)
+    const clear = () => setTimeout(() => setImportResult(null), 0)
 
     const originalPushState = window.history.pushState.bind(window.history)
     window.history.pushState = (...args) => {
