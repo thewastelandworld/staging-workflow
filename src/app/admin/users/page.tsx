@@ -234,7 +234,6 @@ export default function AdminUsersPage() {
                   <tr className="bg-gray-50 border-b border-gray-200 text-xs text-gray-500 uppercase tracking-wide">
                     <th className="text-left px-5 py-3 font-medium">ユーザー</th>
                     <th className="text-left px-5 py-3 font-medium">メール</th>
-                    <th className="text-left px-5 py-3 font-medium w-40">権限</th>
                     <th className="text-left px-5 py-3 font-medium w-64">所属チーム</th>
                     <th className="px-5 py-3" />
                   </tr>
@@ -258,11 +257,6 @@ export default function AdminUsersPage() {
                         </td>
                         <td className="px-5 py-4 text-sm text-gray-500">
                           {user.email ?? <span className="text-gray-300">—</span>}
-                        </td>
-                        <td className="px-5 py-4">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${PERMISSION_STYLE[user.permission]}`}>
-                            {PERMISSION_LABEL[user.permission]}
-                          </span>
                         </td>
                         <td className="px-5 py-4">
                           {teams.length === 0 ? (
