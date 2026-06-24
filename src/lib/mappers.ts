@@ -83,13 +83,20 @@ export function toTeam(row: Record<string, unknown>): Team {
     name: row.name as string,
     color: row.color as string,
     createdAt: row.created_at as string,
-    members: userTeams.map((ut) => ({
-      id: ut.users.id,
-      username: ut.users.username,
-      name: ut.users.display_name ?? ut.users.username,
-      email: ut.users.email ?? '',
-      role: ut.role ?? undefined,
-      permission: ut.users.permission ?? undefined,
-    })),
+    members: userTeams
+      .map((ut) => ({
+        id: ut.users.id,
+        username: ut.users.username,
+        name: ut.users.display_name ?? ut.users.username,
+        email: ut.users.email ?? '',
+        role: ut.role ?? undefined,
+        permission: ut.users.permission ?? undefined,
+      }))
+      .sort((a, b) => {
+        const aLeader = a.permission === 'team_leader' ? 0 : 1
+        const bLeader = b.permission === 'team_leader' ? 0 : 1
+        if (aLeader !== bLeader) return aLeader - bLeader
+        return a.name.localeCompare(b.name, 'ja')
+      }),
   }
 }
