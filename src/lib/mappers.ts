@@ -73,7 +73,7 @@ export function toProject(row: Record<string, unknown>): Project {
 
 type UserTeamRow = {
   role: string | null
-  users: { id: string; username: string; display_name: string | null; email: string | null; permission: string | null }
+  users: { id: string; username: string; display_name: string | null; email: string | null; permission: string | null; status: string | null }
 }
 
 export function toTeam(row: Record<string, unknown>): Team {
@@ -91,6 +91,7 @@ export function toTeam(row: Record<string, unknown>): Team {
         email: ut.users.email ?? '',
         role: ut.role ?? undefined,
         permission: ut.users.permission ?? undefined,
+        status: ut.users.status ?? undefined,
       }))
       .sort((a, b) => {
         const aLeader = a.permission === 'team_leader' ? 0 : 1

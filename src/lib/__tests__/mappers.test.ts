@@ -37,7 +37,7 @@ describe('toTeam', () => {
     color: '#3b82f6',
     created_at: '2024-02-01T00:00:00Z',
     user_teams: [
-      { role: 'Lead', users: { id: 'u1', username: 'alice', display_name: 'Alice', email: 'alice@example.com' } },
+      { role: 'Lead', users: { id: 'u1', username: 'alice', display_name: 'Alice', email: 'alice@example.com', status: 'approved', permission: null } },
     ],
   }
 
@@ -53,6 +53,29 @@ describe('toTeam', () => {
     expect(t.members[0].name).toBe('Alice')
     expect(t.members[0].email).toBe('alice@example.com')
     expect(t.members[0].role).toBe('Lead')
+    expect(t.members[0].status).toBe('approved')
+  })
+
+  it('maps status: pending for pending members', () => {
+    const row = {
+      ...base,
+      user_teams: [
+        { role: null, users: { id: 'u2', username: 'bob', display_name: 'Bob', email: 'bob@example.com', status: 'pending', permission: null } },
+      ],
+    }
+    const t = toTeam(row)
+    expect(t.members[0].status).toBe('pending')
+  })
+
+  it('maps status to undefined when null', () => {
+    const row = {
+      ...base,
+      user_teams: [
+        { role: null, users: { id: 'u3', username: 'carol', display_name: null, email: null, status: null, permission: null } },
+      ],
+    }
+    const t = toTeam(row)
+    expect(t.members[0].status).toBeUndefined()
   })
 
   it('defaults members to empty array when no user_teams', () => {

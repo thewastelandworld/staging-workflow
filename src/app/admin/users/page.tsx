@@ -152,6 +152,7 @@ export default function AdminUsersPage() {
                   <tr className="bg-orange-50 border-b border-orange-100 text-xs text-gray-500 uppercase tracking-wide">
                     <th className="text-left px-5 py-3 font-medium">ユーザー</th>
                     <th className="text-left px-5 py-3 font-medium">メール</th>
+                    <th className="text-left px-5 py-3 font-medium">所属チーム</th>
                     <th className="px-5 py-3" />
                   </tr>
                 </thead>
@@ -166,6 +167,23 @@ export default function AdminUsersPage() {
                         </td>
                         <td className="px-5 py-4 text-sm text-gray-500">
                           {user.email ?? <span className="text-gray-300">—</span>}
+                        </td>
+                        <td className="px-5 py-4">
+                          {(() => {
+                            const teams = userTeams[user.id] ?? []
+                            return teams.length === 0 ? (
+                              <span className="text-xs text-gray-300">—</span>
+                            ) : (
+                              <div className="flex flex-wrap gap-1">
+                                {teams.map(team => (
+                                  <span key={team.id} className="inline-flex items-center gap-1 text-xs px-2 py-0.5 bg-orange-50 border border-orange-200 rounded-full text-gray-600">
+                                    <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: team.color }} />
+                                    {team.name}
+                                  </span>
+                                ))}
+                              </div>
+                            )
+                          })()}
                         </td>
                         <td className="px-5 py-4">
                           <div className="flex items-center justify-end gap-2">

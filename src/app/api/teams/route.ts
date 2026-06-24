@@ -6,7 +6,7 @@ import { cacheLife, cacheTag, revalidateTag } from 'next/cache'
 import { log } from '@/lib/logger'
 import { assertAdmin } from '@/lib/auth'
 
-const MEMBER_SELECT = 'user_teams(role, users(id, username, display_name, email, permission))'
+const MEMBER_SELECT = 'user_teams(role, users(id, username, display_name, email, permission, status))'
 
 async function fetchTeams() {
   'use cache'

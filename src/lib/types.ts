@@ -7,6 +7,7 @@ export interface Member {
   email: string   // users.email
   role?: string   // team-specific role from user_teams.role
   permission?: string  // users.permission
+  status?: string      // users.status
 }
 
 export interface Team {

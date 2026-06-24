@@ -38,6 +38,7 @@ export default function TeamsPage() {
   const [memberForms, setMemberForms] = useState<Record<string, { userId: string; role: string; query: string; open: boolean }>>({})
   const [expandedTeam, setExpandedTeam] = useState<string | null>(null)
   const [allUsers, setAllUsers] = useState<UserOption[]>([])
+  const [approveBusy, setApproveBusy] = useState<string | null>(null)
   const [leaderBusy, setLeaderBusy] = useState<string | null>(null)
   const [editingRole, setEditingRole] = useState<{ teamId: string; userId: string; value: string; original: string } | null>(null)
   const [roleBusy, setRoleBusy] = useState<string | null>(null)
@@ -131,6 +132,22 @@ export default function TeamsPage() {
 
   async function removeMember(teamId: string, userId: string) {
     await fetch(`/api/teams/${teamId}/members/${userId}`, { method: 'DELETE' })
+    load()
+  }
+
+  async function approveUser(userId: string) {
+    setApproveBusy(userId)
+    const res = await fetch(`/api/admin/users/${userId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ approve: true }),
+    })
+    setApproveBusy(null)
+    if (!res.ok) {
+      const data = await res.json()
+      alert(data.error ?? '承認に失敗しました')
+      return
+    }
     load()
   }
 
@@ -397,13 +414,18 @@ export default function TeamsPage() {
                           <div className="space-y-2">
                             {team.members.map((m) => {
                               const isLeader = m.permission === 'team_leader'
+                              const isPending = m.status === 'pending'
                               const isBusy = leaderBusy === m.id
+                              const isApproveBusy = approveBusy === m.id
                               return (
-                                <div key={m.id} className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2">
+                                <div key={m.id} className={`flex items-center justify-between rounded-lg px-3 py-2 ${isPending ? 'bg-orange-50' : 'bg-gray-50'}`}>
                                   <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-1.5 flex-wrap">
                                       <span className="text-sm font-medium text-gray-800">{m.name}</span>
-                                      {isLeader && (
+                                      {isPending && (
+                                        <span className="text-xs bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-medium">承認待ち</span>
+                                      )}
+                                      {isLeader && !isPending && (
                                         <span className="text-xs bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded font-medium">リーダー</span>
                                       )}
                                       {editingRole?.teamId === team.id && editingRole?.userId === m.id ? (
@@ -436,7 +458,16 @@ export default function TeamsPage() {
                                     <div className="text-xs text-gray-400 mt-0.5">{m.email}</div>
                                   </div>
                                   <div className="flex items-center gap-2">
-                                    {isAdmin && (
+                                    {isPending && canManageMembers && (
+                                      <button
+                                        onClick={() => approveUser(m.id)}
+                                        disabled={isApproveBusy}
+                                        className="text-xs px-2 py-0.5 rounded border border-green-300 text-green-600 hover:bg-green-50 transition-colors disabled:opacity-40"
+                                      >
+                                        {isApproveBusy ? '...' : '承認'}
+                                      </button>
+                                    )}
+                                    {!isPending && isAdmin && (
                                       <button
                                         onClick={() => setLeader(m.id, !isLeader)}
                                         disabled={isBusy}
