@@ -22,16 +22,16 @@ interface TeamInfo {
 
 const PERMISSION_LABEL: Record<string, string> = {
   admin: '管理員',
-  team_leader: 'チームリーダー',
+  team_leader: '使用者',
   user: '使用者',
-  readonly: '読み取り専用',
+  readonly: '使用者',
 }
 
 const PERMISSION_STYLE: Record<string, string> = {
   admin: 'bg-blue-100 text-blue-700',
-  team_leader: 'bg-purple-100 text-purple-700',
+  team_leader: 'bg-green-100 text-green-700',
   user: 'bg-green-100 text-green-700',
-  readonly: 'bg-yellow-100 text-yellow-700',
+  readonly: 'bg-green-100 text-green-700',
 }
 
 export default function AdminUsersPage() {
@@ -93,7 +93,7 @@ export default function AdminUsersPage() {
     setBusy(null)
   }
 
-  async function changePermission(user: User, newPermission: 'user' | 'readonly') {
+  async function changePermission(user: User, newPermission: 'user') {
     if (newPermission === user.permission) return
     setBusy(user.id)
     const res = await fetch(`/api/admin/users/${user.id}`, {
@@ -219,7 +219,7 @@ export default function AdminUsersPage() {
           </div>
 
           <div className="mb-4 px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-500">
-            権限変更は <span className="font-medium text-green-700">使用者</span>・<span className="font-medium text-yellow-700">読み取り専用</span> のみ設定できます。<span className="font-medium text-blue-700">管理員</span> への変更はできません。チームリーダーの指定はチーム管理画面から行ってください。
+            権限は <span className="font-medium text-green-700">使用者</span> のみ設定できます。<span className="font-medium text-blue-700">管理員</span> への変更はできません。チームリーダーの指定はチーム管理画面から行ってください。
           </div>
 
           {approved.length === 0 ? (
@@ -244,7 +244,7 @@ export default function AdminUsersPage() {
                     const isSelf = user.username === session?.user
                     const isAdmin = user.permission === 'admin'
                     const isBusy = busy === user.id
-                    const canEdit = !isSelf && !isAdmin
+                    const canEdit = !isSelf && !isAdmin && user.permission !== 'team_leader'
                     const teams = userTeams[user.id] ?? []
 
                     return (
@@ -285,13 +285,12 @@ export default function AdminUsersPage() {
                           <div className="flex items-center justify-end gap-2">
                             {canEdit ? (
                               <select
-                                value={user.permission}
+                                value="user"
                                 disabled={isBusy}
-                                onChange={e => changePermission(user, e.target.value as 'user' | 'readonly')}
+                                onChange={e => changePermission(user, e.target.value as 'user')}
                                 className="text-xs px-2 py-1.5 border border-gray-300 rounded-lg text-gray-600 bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-blue-400"
                               >
                                 <option value="user">使用者</option>
-                                <option value="readonly">読み取り専用</option>
                               </select>
                             ) : (
                               <span className="text-xs text-gray-300 px-3 py-1.5">変更不可</span>
