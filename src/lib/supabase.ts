@@ -3,6 +3,8 @@ import { createClient } from '@supabase/supabase-js'
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let _client: ReturnType<typeof createClient<any>> | null = null
 
+// サービスロールキーで接続するシングルトン Supabase クライアントを返す。
+// RLS をバイパスするため、サーバーサイドのみで使用すること
 export function getSupabase() {
   if (!_client) {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL

@@ -6,8 +6,10 @@ import { cacheLife, cacheTag, revalidateTag } from 'next/cache'
 import { log } from '@/lib/logger'
 import { assertAdmin } from '@/lib/auth'
 
+// メンバー・権限・ステータスまで取得するためのジョイン SELECT 句
 const MEMBER_SELECT = 'user_teams(role, users(id, username, display_name, email, permission, status))'
 
+// 全チームをメンバー付きで取得する
 async function fetchTeams() {
   'use cache'
   cacheLife('minutes')
@@ -20,6 +22,7 @@ async function fetchTeams() {
   return (data ?? []).map(toTeam)
 }
 
+// GET /api/teams — チーム一覧を返す（認証不要）
 export async function GET() {
   try {
     return NextResponse.json(await fetchTeams())
@@ -29,6 +32,8 @@ export async function GET() {
   }
 }
 
+// POST /api/teams — 新規チームを作成する（admin 専用）
+// color が省略された場合はプリセットの 8 色をチーム数でローテーションして割り当てる
 export async function POST(req: Request) {
   const deny = await assertAdmin()
   if (deny) return deny

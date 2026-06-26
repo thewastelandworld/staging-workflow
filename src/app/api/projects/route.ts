@@ -6,6 +6,7 @@ import { cacheLife, cacheTag, revalidateTag } from 'next/cache'
 import { log } from '@/lib/logger'
 import { assertWritable, getSession } from '@/lib/auth'
 
+// 全プロジェクトをステージ・レビュアー付きで取得する。Next.js キャッシュで数分間保持する
 async function fetchProjects() {
   'use cache'
   cacheLife('minutes')
@@ -18,6 +19,8 @@ async function fetchProjects() {
   return (data ?? []).map(toProject)
 }
 
+// GET /api/projects — ログインユーザーが閲覧可能なプロジェクト一覧を返す
+// admin は全件、一般ユーザーは自分が作成・担当・確認チームのプロジェクトのみ表示する
 export async function GET() {
   const session = await getSession()
   if (!session) {
@@ -65,6 +68,7 @@ export async function GET() {
   }
 }
 
+// POST /api/projects — 新規プロジェクトを作成する。readonly ユーザーは不可
 export async function POST(req: Request) {
   const deny = await assertWritable()
   if (deny) return deny

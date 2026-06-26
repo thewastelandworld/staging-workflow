@@ -5,6 +5,7 @@ import { cacheLife, cacheTag, revalidateTag } from 'next/cache'
 import { log } from '@/lib/logger'
 import { assertWritable } from '@/lib/auth'
 
+// 特定プロジェクトをステージ・レビュアー付きで取得する。プロジェクト単位でタグ管理する
 async function fetchProject(id: string) {
   'use cache'
   cacheLife('minutes')
@@ -18,6 +19,7 @@ async function fetchProject(id: string) {
   return data
 }
 
+// GET /api/projects/[id] — プロジェクト詳細を返す
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const row = await fetchProject(id)
@@ -28,6 +30,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   return NextResponse.json(toProject(row))
 }
 
+// PATCH /api/projects/[id] — プロジェクト名・説明を更新する
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const deny = await assertWritable()
   if (deny) return deny
@@ -49,6 +52,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   return NextResponse.json(toProject(data))
 }
 
+// DELETE /api/projects/[id] — プロジェクトを削除する（ステージはカスケード削除）
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const deny = await assertWritable()
   if (deny) return deny

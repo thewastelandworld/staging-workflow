@@ -1,6 +1,7 @@
 import { getSession } from '@/lib/auth'
 import { getSupabase } from '@/lib/supabase'
 
+// GET /api/admin/users — 全ユーザー一覧を返す（admin 専用）
 export async function GET() {
   try {
     const session = await getSession()

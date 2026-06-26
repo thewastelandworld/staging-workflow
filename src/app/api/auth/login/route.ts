@@ -4,6 +4,8 @@ import { getSupabase } from '@/lib/supabase'
 import { verifyPassword } from '@/lib/password'
 import type { Permission } from '@/lib/session'
 
+// POST /api/auth/login — ユーザー認証を行いセッション Cookie を発行する
+// Supabase の users テーブルを先に検索し、失敗した場合はハードコードの管理者資格にフォールバックする
 export async function POST(req: Request) {
   const { username, password } = await req.json()
 

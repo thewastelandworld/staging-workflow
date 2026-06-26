@@ -1,5 +1,7 @@
+// Supabase の DB 行 → アプリ型へのマッピング関数群
 import type { Project, Team, Stage, StageReviewer, StageStatus } from './types'
 
+// stage_reviewers テーブルの行型
 type StageReviewerRow = {
   stage_id: string
   team_id: string
@@ -9,6 +11,7 @@ type StageReviewerRow = {
   note: string | null
 }
 
+// stages テーブルの行型。stage_reviewers はジョインして取得する場合に含まれる
 export type StageRow = {
   id: string
   project_id: string
@@ -27,6 +30,7 @@ export type StageRow = {
   stage_reviewers?: StageReviewerRow[]
 }
 
+// DB 行を StageReviewer 型に変換する
 export function toStageReviewer(row: StageReviewerRow): StageReviewer {
   return {
     teamId: row.team_id,
@@ -37,6 +41,7 @@ export function toStageReviewer(row: StageReviewerRow): StageReviewer {
   }
 }
 
+// DB 行を Stage 型に変換する。レビュアーは order 順にソートして付与する
 export function toStage(row: StageRow): Stage {
   return {
     id: row.id,
@@ -59,6 +64,7 @@ export function toStage(row: StageRow): Stage {
   }
 }
 
+// DB 行を Project 型に変換する。ステージは order 順にソートして付与する
 export function toProject(row: Record<string, unknown>): Project {
   const stageRows = (row.stages as StageRow[]) ?? []
   return {
@@ -71,11 +77,13 @@ export function toProject(row: Record<string, unknown>): Project {
   }
 }
 
+// user_teams ジョイン行型
 type UserTeamRow = {
   role: string | null
   users: { id: string; username: string; display_name: string | null; email: string | null; permission: string | null; status: string | null }
 }
 
+// DB 行を Team 型に変換する。メンバーはチームリーダー優先・名前順でソートする
 export function toTeam(row: Record<string, unknown>): Team {
   const userTeams = (row.user_teams as UserTeamRow[]) ?? []
   return {
@@ -94,6 +102,7 @@ export function toTeam(row: Record<string, unknown>): Team {
         status: ut.users.status ?? undefined,
       }))
       .sort((a, b) => {
+        // team_leader を先頭に表示し、同権限内は日本語名前順
         const aLeader = a.permission === 'team_leader' ? 0 : 1
         const bLeader = b.permission === 'team_leader' ? 0 : 1
         if (aLeader !== bLeader) return aLeader - bLeader

@@ -1,8 +1,12 @@
 import { getSupabase } from '@/lib/supabase'
 import { hashPassword } from '@/lib/password'
 
+// ユーザー名の許容パターン: 3〜32文字の英数字・アンダースコア・ハイフン
 const USERNAME_RE = /^[a-zA-Z0-9_-]{3,32}$/
 
+// POST /api/auth/register — 新規ユーザーを登録する
+// 登録直後のステータスは 'pending' で、管理者承認後にログイン可能になる
+// ユーザーとチームの紐付け（user_teams）はアトミックに処理し、失敗時はユーザーをロールバックする
 export async function POST(req: Request) {
   const { username, displayName, email, password, teamId } = await req.json()
 

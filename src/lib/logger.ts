@@ -1,6 +1,8 @@
+// 構造化ログ出力と Slack Webhook 通知を担うモジュール
 type Fields = Record<string, unknown>
 type Level = 'info' | 'warn' | 'error'
 
+// JSON 形式でログを出力し、warn/error 時は MONITOR_WEBHOOK_URL へも送信する
 function emit(level: Level, msg: string, fields?: Fields) {
   const entry: Record<string, unknown> = {
     level,
@@ -20,6 +22,7 @@ function emit(level: Level, msg: string, fields?: Fields) {
   }
 }
 
+// Slack 互換 Webhook にメッセージを POST する
 async function notify(webhookUrl: string, level: Level, msg: string, fields?: Fields) {
   const emoji = level === 'error' ? '🔴' : '⚠️'
   const fieldsText = fields && Object.keys(fields).length > 0
@@ -34,12 +37,14 @@ async function notify(webhookUrl: string, level: Level, msg: string, fields?: Fi
   })
 }
 
+// アプリ全体で使う構造化ロガー
 export const log = {
   info:  (msg: string, fields?: Fields) => emit('info',  msg, fields),
   warn:  (msg: string, fields?: Fields) => emit('warn',  msg, fields),
   error: (msg: string, fields?: Fields) => emit('error', msg, fields),
 }
 
+// 期限超過ステージの一覧を Slack に一括通知する（バッチ cron から呼ばれる）
 export async function notifyOverdue(
   stages: { project: string; projectId: string; stage: string; deadline: string }[],
 ) {
@@ -66,6 +71,7 @@ export async function notifyOverdue(
   }
 }
 
+// 次ステージの担当チームに開始を通知する（前ステージ完了時に呼ばれる）
 export async function notifyStageStart(
   projectId: string,
   projectName: string,
@@ -105,6 +111,7 @@ export async function notifyStageStart(
   }
 }
 
+// 確認順の次のチームに確認依頼を通知する
 export async function notifyReviewerTurn(
   projectId: string,
   projectName: string,
@@ -144,6 +151,7 @@ export async function notifyReviewerTurn(
   }
 }
 
+// ステージに問題が報告されたことを MONITOR_WEBHOOK_URL に通知する
 export async function notifyProblem(
   projectId: string,
   projectName: string,
@@ -169,6 +177,7 @@ export async function notifyProblem(
   }
 }
 
+// ステージの問題が解決されたことを通知する
 export async function notifyProblemResolved(
   projectId: string,
   projectName: string,

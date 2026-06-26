@@ -8,6 +8,7 @@ import { assertWritable } from '@/lib/auth'
 
 type Params = { params: Promise<{ id: string; stageId: string }> }
 
+// stage_reviewers テーブルの行型（ローカル定義）
 type StageReviewerRow = {
   stage_id: string
   team_id: string
@@ -17,11 +18,13 @@ type StageReviewerRow = {
   note: string | null
 }
 
+// ステージ行にプロジェクト情報をジョインした型
 type StageRowWithProject = StageRow & {
   stage_reviewers: StageReviewerRow[]
   projects: { id: string; name: string }
 }
 
+// ステージをレビュアー・プロジェクト情報付きで取得する
 async function getStageRow(stageId: string): Promise<StageRowWithProject | null> {
   const { data, error } = await getSupabase()
     .from('stages')
@@ -32,6 +35,7 @@ async function getStageRow(stageId: string): Promise<StageRowWithProject | null>
   return data as StageRowWithProject
 }
 
+// チーム一覧を取得する（通知先の特定に使用）
 async function getTeams(): Promise<Team[]> {
   const { data } = await getSupabase().from('teams').select('*')
   return (data ?? []).map((row: Record<string, unknown>) => ({
@@ -43,6 +47,8 @@ async function getTeams(): Promise<Team[]> {
   }))
 }
 
+// 完了ステージの次のステージを in_progress に進め、担当チームに Slack 通知する。
+// email_sent フラグで重複通知を防いでいる
 async function advanceNextStage(
   projectId: string,
   projectName: string,
@@ -89,6 +95,8 @@ async function advanceNextStage(
   return { success: true }
 }
 
+// PATCH /api/projects/[id]/stages/[stageId] — ステージを更新する
+// body.reviewerCheck がある場合は確認チェック処理を行い、ない場合は通常更新（状態・内容変更）を行う
 export async function PATCH(req: Request, { params }: Params) {
   const deny = await assertWritable()
   if (deny) return deny
@@ -294,6 +302,7 @@ export async function PATCH(req: Request, { params }: Params) {
   return NextResponse.json({ stage: updated, emailResult })
 }
 
+// DELETE /api/projects/[id]/stages/[stageId] — ステージを削除する（stage_reviewers はカスケード削除）
 export async function DELETE(_req: Request, { params }: Params) {
   const deny = await assertWritable()
   if (deny) return deny

@@ -1,6 +1,9 @@
+// ステージ開始・確認依頼・期限超過をメールで通知するモジュール
+// SMTP 設定がない場合は Ethereal テストアカウントにフォールバックする
 import nodemailer from 'nodemailer'
 import type { Stage, Team, Project, StageReviewer } from './types'
 
+// SMTP_HOST が設定されていれば本番トランスポートを、なければ null を返す
 function createTransport() {
   // .env に SMTP 設定が無ければ Ethereal (テスト用) を自動生成
   if (process.env.SMTP_HOST) {
@@ -18,6 +21,7 @@ function createTransport() {
   return null
 }
 
+// 担当チームのメンバー全員にステージ開始を通知するメールを送信する
 export async function sendStageStartEmail(
   project: Project,
   stage: Stage,
@@ -87,6 +91,7 @@ export async function sendStageStartEmail(
   }
 }
 
+// 次の確認担当チームに確認依頼メールを送信する
 export async function sendReviewerEmail(
   project: Project,
   stage: Stage,
@@ -154,6 +159,7 @@ export async function sendReviewerEmail(
   }
 }
 
+// 期限超過のステージを担当チームに警告メールで通知する。送信失敗はサイレントに無視する
 export async function sendOverdueAlert(
   project: Project,
   stage: Stage,

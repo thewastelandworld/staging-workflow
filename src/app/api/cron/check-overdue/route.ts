@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { getSupabase } from '@/lib/supabase'
 import { log, notifyOverdue } from '@/lib/logger'
 
+// GET /api/cron/check-overdue — 期限超過ステージを検出して Slack に通知するバッチ処理
+// CRON_SECRET が設定されている場合は Bearer トークンで認証する
 export async function GET(req: Request) {
   const cronSecret = process.env.CRON_SECRET
   if (cronSecret) {

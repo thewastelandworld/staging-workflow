@@ -6,6 +6,8 @@ import { revalidateTag } from 'next/cache'
 import { log } from '@/lib/logger'
 import { assertWritable } from '@/lib/auth'
 
+// POST /api/projects/[id]/stages — プロジェクトに新規ステージを追加する
+// body.order が省略された場合は既存ステージ数 + 1 を自動付与する
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const deny = await assertWritable()
   if (deny) return deny

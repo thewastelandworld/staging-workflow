@@ -1,23 +1,30 @@
 import 'server-only'
 
+// セッションの権限レベル。admin > team_leader > user > readonly の順で権限が強い
 export type Permission = 'admin' | 'team_leader' | 'user' | 'readonly'
+
+// セッショントークンに埋め込むペイロード。exp は Unix ミリ秒
 export interface Session { user: string; permission: Permission; exp: number }
 
+// HMAC 署名に使う秘密鍵。本番では SESSION_SECRET 環境変数を必ず設定すること
 function secret() {
   return process.env.SESSION_SECRET ?? 'dev-secret-change-in-production'
 }
 
+// Base64url エンコード（RFC 4648 §5）
 function b64url(buf: ArrayBuffer): string {
   return btoa(String.fromCharCode(...new Uint8Array(buf)))
     .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '')
 }
 
+// Base64url デコード。パディングを補完してから atob に渡す
 function b64decode(str: string): ArrayBuffer {
   const padded = str.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((str.length + 3) % 4)
   const bytes = Uint8Array.from(atob(padded), c => c.charCodeAt(0))
   return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)
 }
 
+// Web Crypto API で HMAC-SHA256 の CryptoKey を生成する
 async function getKey(): Promise<CryptoKey> {
   return crypto.subtle.importKey(
     'raw',
@@ -28,6 +35,7 @@ async function getKey(): Promise<CryptoKey> {
   )
 }
 
+// セッションペイロードを Base64url(JSON).HMAC 形式のトークンに署名する
 export async function signSession(payload: Session): Promise<string> {
   const data = btoa(JSON.stringify(payload)).replace(/=/g, '')
   const key = await getKey()
@@ -35,6 +43,7 @@ export async function signSession(payload: Session): Promise<string> {
   return `${data}.${sig}`
 }
 
+// トークンの署名を検証し、有効なら Session を返す。改ざん・期限切れは null
 export async function verifySession(token: string): Promise<Session | null> {
   const dot = token.lastIndexOf('.')
   if (dot === -1) return null

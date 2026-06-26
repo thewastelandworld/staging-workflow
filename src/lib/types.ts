@@ -1,5 +1,7 @@
+// ステージの進行状態。overdue はバッチ処理で自動付与される
 export type StageStatus = 'pending' | 'in_progress' | 'reviewing' | 'completed' | 'overdue'
 
+// チームメンバーを表す。permission/status はユーザー管理画面向けに含める
 export interface Member {
   id: string      // users.id
   username: string
@@ -10,6 +12,7 @@ export interface Member {
   status?: string      // users.status
 }
 
+// チームとそのメンバー一覧
 export interface Team {
   id: string
   name: string
@@ -18,6 +21,7 @@ export interface Team {
   createdAt: string
 }
 
+// ステージに紐づく確認担当チームのエントリ。order が小さい順に確認する
 export interface StageReviewer {
   teamId: string
   order: number
@@ -26,6 +30,7 @@ export interface StageReviewer {
   note?: string          // 確認者が入力したコメント
 }
 
+// 単一ステージ。stages テーブルと stage_reviewers テーブルを結合した形
 export interface Stage {
   id: string
   projectId: string
@@ -40,10 +45,11 @@ export interface Stage {
   notes?: string
   problem?: string
   problemTeamId?: string
-  emailSent?: boolean
+  emailSent?: boolean     // Slack/メール通知済みフラグ（重複送信防止）
   reviewers?: StageReviewer[]
 }
 
+// プロジェクト（ケース）。ステージを順序付きで保持する
 export interface Project {
   id: string
   name: string
@@ -53,6 +59,7 @@ export interface Project {
   stages: Stage[]
 }
 
+// 旧 JSON ファイル DB 型。Supabase 移行後は使用していない
 export interface DB {
   projects: Project[]
   teams: Team[]

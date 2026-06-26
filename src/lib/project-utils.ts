@@ -1,6 +1,8 @@
 import type { Project } from './types'
 import type { Translations } from './i18n'
 
+// プロジェクトの現在の進捗状態を取得する。
+// ケース一覧の「ステータス」列の表示ラベルと色を返す
 export function getProjectStatus(project: Project, t: Translations) {
   if (project.stages.length === 0) return { label: t.noStages, color: 'text-gray-400', bg: 'bg-gray-50' }
   const now = new Date()
@@ -8,6 +10,7 @@ export function getProjectStatus(project: Project, t: Translations) {
     (s) => s.status !== 'completed' && new Date(s.deadline) < now
   )
   const allDone = project.stages.every((s) => s.status === 'completed')
+  // 未完了ステージのうち最も order が小さいものが「現在のステージ」
   const current = project.stages
     .filter((s) => s.status !== 'completed')
     .sort((a, b) => a.order - b.order)[0]
